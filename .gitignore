@@ -1,4 +1,7 @@
-*.pyd
+*.egg-info
 *.pyc
-venv
+*.pyd
 .venv
+build
+dist
+venv
