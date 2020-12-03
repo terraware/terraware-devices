@@ -6,7 +6,7 @@ long_description = (here / 'README.md').read_text()
 
 setup(
     name='terraware-devices',
-    version='0.1.0',
+    version='0.1.1',
     description='Device management for Terraformation hardware systems',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -24,6 +24,14 @@ setup(
         'Programming Language :: Python :: 3.9',
     ],
     install_requires=[
+        # bluepy is not actively maintained; see https://github.com/IanHarvey/bluepy/issues/403
+        # It has a Linux-specific C extension, so skip install on other platforms.
+        'bluepy~=1.3; platform_system=="Linux"',
+        # gevent versions are date-based so tell us nothing about breaking changes
+        'gevent>=20.9',
+        # pymodbus bumps its minor version number for each release
+        'pymodbus~=2.4',
+        # rhizo-server API is under development, so minor versions might have breaking changes
         'rhizo-client~=0.1.0',
     ],
     license='MIT',

@@ -8,6 +8,8 @@ To install the latest release: `pip install terraware-devices`
 
 To install a local copy of this repo as a dependency in another project: `pip install -e /path/to/terraware-devices`
 
+To install dependencies to work on the code locally: `pip install -e .`
+
 ## Packaging
 
 Run `make package` to package the code for public distribution.
