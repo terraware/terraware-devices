@@ -23,7 +23,7 @@ class DeviceManager(object):
         self.start_time = None
         self.diagnostic_mode = self.controller.config.device_diagnostics
         self.handler = None
-        if self.controller.config.sim:
+        if self.controller.config.get('sim', False):
             self.load('config/sim_devices.csv')
         else:
             self.load('config/devices.csv')
