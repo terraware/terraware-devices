@@ -1,11 +1,14 @@
 import time
 import logging
 from xml.etree import ElementTree
+
 try:
     from httplib import HTTPConnection
 except ModuleNotFoundError:
     from http.client import HTTPConnection
 import gevent
+
+from .base import TerrawareDevice
 
 
 sample_data = '''<?xml version='1.0' encoding='utf-8'?>
@@ -18,7 +21,7 @@ sample_data = '''<?xml version='1.0' encoding='utf-8'?>
 '''
 
 
-class RelayDevice(object):
+class RelayDevice(TerrawareDevice):
 
     def __init__(self, controller, server_path, host, port, settings, polling_interval, diagnostic_mode):
         print('initializing device %s (%s:%d)' % (server_path, host, port))

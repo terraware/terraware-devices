@@ -7,15 +7,19 @@ import csv
 import time
 import gevent
 import logging
+from typing import List
 
 # other imports
 from rhizo.controller import Controller
+from .base import TerrawareDevice
 from .relay_device import RelayDevice
 from .modbus_device import ModbusDevice
 
 
 # manages a set of devices; each device handles a connection to physical hardware
 class DeviceManager(object):
+
+    devices: List[TerrawareDevice]
 
     def __init__(self):
         self.controller = Controller()
@@ -47,7 +51,9 @@ class DeviceManager(object):
                         device = ModbusDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode)
                     else:
                         print('unrecognized device type: %s' % device_type)
-                    self.devices.append(device)
+                        device = None
+                    if device:
+                        self.devices.append(device)
 
     def set_handler(self, handler):
         self.handler = handler
@@ -86,8 +92,8 @@ class DeviceManager(object):
         if time.time() - self.start_time > 30:
             devices_ok = True
             for device in self.devices:
-                if device._last_update_time is None or time.time() - device._last_update_time > 10 * 60:
-                    logging.info('no recent update for device %s', device._server_path)
+                if device.last_update_time is None or time.time() - device.last_update_time > 10 * 60:
+                    logging.info('no recent update for device %s', device.server_path())
                     if auto_restart:
                         device.greenlet.kill()  # this doesn't seem to work; we end up with multiple greenlets for the same device
                         device.greenlet = gevent.spawn(device.run)

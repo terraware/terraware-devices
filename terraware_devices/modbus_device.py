@@ -2,12 +2,16 @@ import csv
 import time
 import random
 import logging
+from typing import Optional
+
 import gevent
 from pymodbus.client.sync import ModbusTcpClient
 from pymodbus.transaction import ModbusRtuFramer, ModbusSocketFramer
 
+from .base import TerrawareDevice
 
-class ModbusDevice(object):
+
+class ModbusDevice(TerrawareDevice):
 
     def __init__(self, controller, server_path, host, port, settings, polling_interval, diagnostic_mode):
         settings_items = settings.split(';')
@@ -20,7 +24,7 @@ class ModbusDevice(object):
             if setting.startswith('unit='):
                 self._unit = int(setting.split('=')[1])
         print('initializing device %s (%s:%d, unit: %d)' % (server_path, host, port, self._unit))
-        self._last_update_time = None
+        self.last_update_time = None
         self._diagnostic_mode = diagnostic_mode
         framer = ModbusRtuFramer if ('rtu-over-tcp' in settings_items) else ModbusSocketFramer
         self._modbus_client = ModbusTcpClient(host, port=port, framer=framer)
@@ -59,7 +63,7 @@ class ModbusDevice(object):
                         seq_values[full_seq_name] = value
             if seq_values:
                 self._controller.sequences.update_multiple(seq_values)
-                self._last_update_time = time.time()
+                self.last_update_time = time.time()
             print('received %d value(s) from %s' % (len(seq_values), self._server_path))
             gevent.sleep(self._polling_interval)
 
