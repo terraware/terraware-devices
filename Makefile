@@ -10,3 +10,6 @@ package:
 upload: package
 	.venv/bin/pip install twine
 	.venv/bin/twine upload --repository $(REPOSITORY) dist/*
+
+CHANGELOG.md: .git/refs/heads/main
+	git changelog -a -x -n -t UNRELEASED > $@

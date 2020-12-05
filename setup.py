@@ -6,7 +6,7 @@ long_description = (here / 'README.md').read_text()
 
 setup(
     name='terraware-devices',
-    version='0.1.1',
+    version='0.1.2',
     description='Device management for Terraformation hardware systems',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -32,7 +32,7 @@ setup(
         # pymodbus bumps its minor version number for each release
         'pymodbus~=2.4',
         # rhizo-server API is under development, so minor versions might have breaking changes
-        'rhizo-client~=0.1.0',
+        'rhizo-client~=0.1.1',
     ],
     license='MIT',
     packages=['terraware_devices'],
