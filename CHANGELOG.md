@@ -1,4 +1,10 @@
 
+v0.1.3 / 2020-12-08
+===================
+
+  * Make relay device handle `set_state` in sim mode
+  * Log exception stack trace if debug logging is enabled
+
 v0.1.2 / 2020-12-04
 ===================
 

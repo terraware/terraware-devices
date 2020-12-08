@@ -11,16 +11,6 @@ import gevent
 from .base import TerrawareDevice
 
 
-sample_data = '''<?xml version='1.0' encoding='utf-8'?>
-<datavalues>
-<relay1state>0</relay1state>
-<relay2state>0</relay2state>
-<relay3state>0</relay3state>
-<relay4state>0</relay4state>
-</datavalues>
-'''
-
-
 class RelayDevice(TerrawareDevice):
 
     def __init__(self, controller, server_path, host, port, settings, polling_interval, diagnostic_mode):
@@ -31,6 +21,7 @@ class RelayDevice(TerrawareDevice):
         self._port = port
         self._polling_interval = polling_interval
         self._last_update_time = None
+        self._sim_state = 0
 
     def server_path(self):
         return self._server_path
@@ -50,7 +41,7 @@ class RelayDevice(TerrawareDevice):
 
     def read_state(self):
         if self._host == 'sim':
-            xml = sample_data
+            xml = self.sample_data()
         else:
             conn = HTTPConnection('%s:%d' % (self._host, self._port))
             conn.request('GET', '/state.xml')
@@ -60,6 +51,18 @@ class RelayDevice(TerrawareDevice):
         return int(tree.find('relay1state').text)
 
     def set_state(self, state):
-        conn = HTTPConnection('%s:%d' % (self._host, self._port))
-        conn.request('GET', '/state.xml?relay1state=%d' % state)
-        conn.close()
+        if self._host == 'sim':
+            self._sim_state = state
+        else:
+            conn = HTTPConnection('%s:%d' % (self._host, self._port))
+            conn.request('GET', '/state.xml?relay1state=%d' % state)
+            conn.close()
+
+    def sample_data(self):
+        return f'''<?xml version='1.0' encoding='utf-8'?>
+            <datavalues>
+                <relay1state>{self._sim_state}</relay1state>
+                <relay2state>0</relay2state>
+                <relay3state>0</relay3state>
+                <relay4state>0</relay4state>
+            </datavalues>'''
