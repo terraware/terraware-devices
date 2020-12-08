@@ -74,8 +74,9 @@ class DeviceManager(object):
             except KeyboardInterrupt:
                 print('exiting')
                 break
-            except Exception as e:
-                logging.warning('exception in handler: %s', e)
+            except Exception as ex:
+                logging.warning('exception in handler: %s', ex)
+                logging.debug('exception details', ex)
             gevent.sleep(10)
 
     # find a device by server_path
