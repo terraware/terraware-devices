@@ -17,6 +17,11 @@ class TerrawareDevice(ABC):
         ...
 
     @abstractmethod
+    def reconnect(self) -> None:
+        """Reconnect to the device."""
+        ...
+
+    @abstractmethod
     def server_path(self) -> str:
         """Return the server-side path of this device."""
         ...

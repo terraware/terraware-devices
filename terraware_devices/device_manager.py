@@ -87,17 +87,14 @@ class DeviceManager(object):
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
     def watchdog_update(self):
-        auto_restart = False  # disable auto-restart for now; we seem to occasionally get duplicate device greenlets
 
         # if it has been a while since startup, start checking device updates
         if time.time() - self.start_time > 30:
             devices_ok = True
             for device in self.devices:
                 if device.last_update_time is None or time.time() - device.last_update_time > 10 * 60:
-                    logging.info('no recent update for device %s', device.server_path())
-                    if auto_restart:
-                        device.greenlet.kill()  # this doesn't seem to work; we end up with multiple greenlets for the same device
-                        device.greenlet = gevent.spawn(device.run)
+                    logging.info('no recent update for device %s; reconnecting', device.server_path())
+                    device.reconnect()
                     devices_ok = False
 
             # if all devices are updating, send a watchdog message to server

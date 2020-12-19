@@ -40,6 +40,9 @@ class ModbusDevice(TerrawareDevice):
     def server_path(self):
         return self._server_path
 
+    def reconnect(self):
+        self._modbus_client.connect()
+
     def run(self):
         logging.info('starting modbus monitoring/control for %s; polling interval: %.1fs', self._server_path, self._polling_interval)
         if self._host != 'sim':

@@ -26,6 +26,9 @@ class RelayDevice(TerrawareDevice):
     def server_path(self):
         return self._server_path
 
+    def reconnect(self):
+        pass
+
     def run(self):
         logging.info('starting relay monitoring/control for %s; polling interval: %.1fs', self._server_path, self._polling_interval)
         while True:
