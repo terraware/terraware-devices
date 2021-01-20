@@ -1,4 +1,10 @@
 
+v0.1.5 / 2021-01-19
+=======================
+
+  * Bump minimum rhizo-client to 0.1.3
+  * added device auto-reconnect if no recent update
+
 v0.1.4 / 2020-12-09
 ===================
 
