@@ -5,3 +5,5 @@
 build
 dist
 venv
+local.yaml
+logs
