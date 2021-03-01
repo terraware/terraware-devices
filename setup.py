@@ -6,7 +6,7 @@ long_description = (here / 'README.md').read_text()
 
 setup(
     name='terraware-devices',
-    version='0.1.5',
+    version='0.1.6',
     description='Device management for Terraformation hardware systems',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -24,6 +24,7 @@ setup(
         'Programming Language :: Python :: 3.9',
     ],
     install_requires=[
+        'requests>=2.0',
         # bluepy is not actively maintained; see https://github.com/IanHarvey/bluepy/issues/403
         # It has a Linux-specific C extension, so skip install on other platforms.
         'bluepy~=1.3; platform_system=="Linux"',
