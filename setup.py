@@ -6,7 +6,7 @@ long_description = (here / 'README.md').read_text()
 
 setup(
     name='terraware-devices',
-    version='0.1.6',
+    version='0.1.7',
     description='Device management for Terraformation hardware systems',
     long_description=long_description,
     long_description_content_type='text/markdown',

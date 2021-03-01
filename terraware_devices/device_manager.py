@@ -27,16 +27,16 @@ class DeviceManager(object):
         self.controller = Controller()
         self.devices = []
         self.has_bluetooth_devices = False
-        self.bluetooth_interface = 0
         self.start_time = None
         self.diagnostic_mode = self.controller.config.device_diagnostics
         self.handler = None
-        if self.controller.config.get('sim', False):
-            self.load_from_file('config/sim_devices.csv')
-        else:
-            self.load_from_file('config/devices.csv')
         if self.controller.config.get('load_from_server', False):
             self.load_from_server()
+        else:
+            if self.controller.config.get('sim', False):
+                self.load_from_file('config/sim_devices.csv')
+            else:
+                self.load_from_file('config/devices.csv')
         self.controller.messages.add_handler(self)
 
     # initialize devices using a CSV file
@@ -73,7 +73,11 @@ class DeviceManager(object):
         server_name = self.controller.config.server_name
         secret_key = self.controller.config.secret_key
         r = requests.get('http://' + server_name + '/api/v1/device/all/config', auth=('', secret_key))
-        dev_infos = r.json()['devices']
+        if r.status_code == 200:
+            dev_infos = r.json()['devices']
+        else:
+            print('error reading devices from server %s' % server_name)
+            return
         count_added = 0
         for dev_info in dev_infos:
             device = None
@@ -115,11 +119,13 @@ class DeviceManager(object):
 
     # a greenlet for update bluetooth devices
     def update_bluetooth_devices(self):
+        interface = self.controller.config.bluetooth_interface
+        scan_timeout = self.controller.config.bluetooth_scan_timeout
         while True:
             timestamp = time.time()
 
             # get list of all devices currently in range
-            dev_infos = find_blue_maestro_devices(timeout=15, iface=self.bluetooth_interface)
+            dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface)
 
             # update our device objects and send values to server
             seq_values = {}

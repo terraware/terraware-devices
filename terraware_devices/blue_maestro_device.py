@@ -6,7 +6,11 @@ def find_blue_maestro_devices(iface=0, timeout=2, verbose=False):
     from bluepy import btle  # importing here for now so that we can test device manager code on systems without bluepy installed
     btle.Debugging = verbose
     scanner = btle.Scanner(iface)
-    devices = scanner.scan(timeout)
+    try:
+        devices = scanner.scan(timeout)
+    except btle.BTLEDisconnectError:  # seems to occur sometimes if the timeout is too long
+        print('BTLE disconnect error')
+        devices = []
     dev_infos = []
     for d in devices:
         manufacturer = d.getValueText(255)
