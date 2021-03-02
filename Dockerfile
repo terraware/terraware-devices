@@ -22,6 +22,7 @@ RUN apt-get update \
 COPY --from=build /usr/local/lib/python3.8 /usr/local/lib/python3.8
 
 COPY balena-config.yaml config.yaml main.py /app/
+COPY specs /app/specs
 COPY terraware_devices /app/terraware_devices
 
 CMD ["python3", "main.py"]
