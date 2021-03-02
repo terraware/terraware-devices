@@ -13,7 +13,7 @@ from .base import TerrawareDevice
 
 class ModbusDevice(TerrawareDevice):
 
-    def __init__(self, controller, server_path, host, port, settings, polling_interval, diagnostic_mode):
+    def __init__(self, controller, server_path, host, port, settings, polling_interval, diagnostic_mode, spec_file_name=None):
         settings_items = settings.split(';')
         self._controller = controller
         self._server_path = server_path
@@ -32,7 +32,9 @@ class ModbusDevice(TerrawareDevice):
         self._seq_infos = []
 
         # load seqeuence info
-        with open('config/%s.csv' % server_path) as csvfile:
+        if spec_file_name is None:
+            spec_file_name = 'config/%s.csv' % server_path
+        with open(spec_file_name) as csvfile:
             lines = csv.DictReader(csvfile)
             for line in lines:
                 self._seq_infos.append(line)

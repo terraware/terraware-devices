@@ -86,6 +86,15 @@ class DeviceManager(object):
                 label = dev_info['address']
                 device = BlueMaestroDevice(server_path, label)
                 self.has_bluetooth_devices = True
+            elif dev_info['protocol'] == 'modbus':
+                server_path = dev_info['serverPath']
+                host = dev_info['address']
+                port = dev_info['port']
+                settings = dev_info['settings']
+                polling_interval = dev_info['pollingInterval']
+                spec_file_name = 'specs/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
+                device = ModbusDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode,
+                                      spec_file_name=spec_file_name)
             if device:
                 self.devices.append(device)
                 count_added += 1
