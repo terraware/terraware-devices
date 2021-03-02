@@ -1,9 +1,6 @@
-*.egg-info
 *.pyc
 *.pyd
 .venv
-build
-dist
 venv
 local.yaml
 logs

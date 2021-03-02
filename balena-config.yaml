@@ -1,0 +1,16 @@
+# Default settings suitable for running in the Balena stack.
+#
+# This does not set all the required config options, just the ones that are
+# less likely to vary from site to site. Callers can pass additional options
+# using RHIZO_ environment variables.
+bluetooth_interface: 0
+bluetooth_scan_timeout: 10
+device_diagnostics: 0
+enable_ws: false
+load_from_server: 1
+mqtt_host: localhost
+mqtt_port: 1883
+mqtt_request_credentials: true
+mqtt_tls: false
+secure_server: false
+server_name: 'localhost:8080'
