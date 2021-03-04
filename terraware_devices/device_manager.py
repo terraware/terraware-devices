@@ -5,7 +5,9 @@ monkey.patch_all()
 # standard library imports
 import csv
 import time
+import json
 import gevent
+import random
 import logging
 from typing import List
 
@@ -15,6 +17,7 @@ from rhizo.controller import Controller
 from .base import TerrawareDevice
 from .relay_device import RelayDevice
 from .modbus_device import ModbusDevice
+from .inhand_router import InHandRouterDevice
 from .blue_maestro_device import BlueMaestroDevice, find_blue_maestro_devices
 
 
@@ -29,44 +32,48 @@ class DeviceManager(object):
         self.has_bluetooth_devices = False
         self.start_time = None
         self.diagnostic_mode = self.controller.config.device_diagnostics
+        self.local_sim = self.controller.config.get('local_sim', False)
         self.handler = None
-        if self.controller.config.get('load_from_server', False):
-            self.load_from_server()
+        local_device_file_name = self.controller.config.get('local_device_file_name')
+        if local_device_file_name:
+            self.load_from_file(local_device_file_name)
         else:
-            if self.controller.config.get('sim', False):
-                self.load_from_file('config/sim_devices.csv')
-            else:
-                self.load_from_file('config/devices.csv')
+            self.load_from_server()
         self.controller.messages.add_handler(self)
 
-    # initialize devices using a CSV file
+    # initialize devices using a JSON file (with same format as device list from server)
     def load_from_file(self, device_list_file_name):
-        with open(device_list_file_name) as csvfile:
-            reader = csv.DictReader(csvfile)
-            count_added = 0
-            for line in reader:
-                if int(line['enabled']):
-                    device_type = line['type']
-                    settings = line['settings']
-                    server_path = line['server_path']
-                    host = line['host']
-                    polling_interval = int(line['polling_interval'])
-                    if device_type == 'relay':
-                        port = int(line['port'])
-                        device = RelayDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode)
-                    elif device_type == 'modbus':
-                        port = int(line['port'])
-                        device = ModbusDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode)
-                    elif device_type == 'blue-maestro':
-                        device = BlueMaestroDevice(server_path, host)
-                        self.has_bluetooth_devices = True
-                    else:
-                        print('unrecognized device type: %s' % device_type)
-                        device = None
-                    if device:
-                        self.devices.append(device)
-                        count_added += 1
-            print('loaded %d devices from %s' % (count_added, device_list_file_name))
+        if device_list_file_name.endswith('json'):
+            with open(device_list_file_name) as json_file:
+                device_infos = json.loads(json_file.read())['devices']
+                count_added = self.create_devices(device_infos)
+        else:  # will remove this case after migrate away from CSV device list
+            with open(device_list_file_name) as csvfile:
+                reader = csv.DictReader(csvfile)
+                count_added = 0
+                for line in reader:
+                    if int(line['enabled']):
+                        device_type = line['type']
+                        settings = line['settings']
+                        server_path = line['server_path']
+                        host = line['host']
+                        polling_interval = int(line['polling_interval'])
+                        if device_type == 'relay':
+                            port = int(line['port'])
+                            device = RelayDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode)
+                        elif device_type == 'modbus':
+                            port = int(line['port'])
+                            device = ModbusDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode)
+                        elif device_type == 'blue-maestro':
+                            device = BlueMaestroDevice(server_path, host)
+                            self.has_bluetooth_devices = True
+                        else:
+                            print('unrecognized device type: %s' % device_type)
+                            device = None
+                        if device:
+                            self.devices.append(device)
+                            count_added += 1
+        print('loaded %d devices from %s' % (count_added, device_list_file_name))
 
     # initialize devices using JSON data from server
     def load_from_server(self):
@@ -74,31 +81,43 @@ class DeviceManager(object):
         secret_key = self.controller.config.secret_key
         r = requests.get('http://' + server_name + '/api/v1/device/all/config', auth=('', secret_key))
         if r.status_code == 200:
-            dev_infos = r.json()['devices']
+            device_infos = r.json()['devices']
         else:
             print('error reading devices from server %s' % server_name)
             return
+        count_added = self.create_devices(device_infos)
+        print('loaded %d devices from %s' % (count_added, server_name))
+
+    # add/initialize devices using a list of dictionaries of device info
+    def create_devices(self, device_infos):
         count_added = 0
-        for dev_info in dev_infos:
+        for dev_info in device_infos:
+            dev_type = dev_info['type']
+            make = dev_info['make']
+            model = dev_info['model']
+            server_path = dev_info['serverPath']
+            address = dev_info['address']
+
+            # initialize a device based on the make/model/type
             device = None
-            if dev_info['type'] == 'sensor' and dev_info['make'] == 'Blue Maestro' and dev_info['model'] == 'Tempo Disc':
-                server_path = dev_info['serverPath']
-                label = dev_info['address']
-                device = BlueMaestroDevice(server_path, label)
+            if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
+                device = BlueMaestroDevice(server_path, address)
                 self.has_bluetooth_devices = True
+            elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
+                device = InHandRouterDevice(self.controller, server_path, address, self.local_sim)
             elif dev_info['protocol'] == 'modbus':
-                server_path = dev_info['serverPath']
-                host = dev_info['address']
                 port = dev_info['port']
                 settings = dev_info['settings']
                 polling_interval = dev_info['pollingInterval']
                 spec_file_name = 'specs/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
-                device = ModbusDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode,
+                device = ModbusDevice(self.controller, server_path, address, port, settings, polling_interval, self.diagnostic_mode,
                                       spec_file_name=spec_file_name)
+
+            # if a device was created, add it to our collection
             if device:
                 self.devices.append(device)
                 count_added += 1
-        print('loaded %d devices from %s' % (count_added, server_name))
+        return count_added
 
     def set_handler(self, handler):
         self.handler = handler
@@ -134,7 +153,18 @@ class DeviceManager(object):
             timestamp = time.time()
 
             # get list of all devices currently in range
-            dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface)
+            if self.local_sim:
+                dev_infos = []
+                for device in self.devices:
+                    if hasattr(device, 'label'):
+                        dev_infos.append({
+                            'label': device.label(),
+                            'temperature': random.uniform(10, 20),
+                            'humidity': random.uniform(20, 30),
+                            'rssi': -random.randint(40, 70),
+                        })
+            else:
+                dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface)
 
             # update our device objects and send values to server
             seq_values = {}

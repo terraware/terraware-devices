@@ -1,4 +1,5 @@
 requests>=2.0
+pexpect>=4.8
 
 # bluepy is not actively maintained; see https://github.com/IanHarvey/bluepy/issues/403
 # It has a Linux-specific C extension, so skip install on other platforms.
