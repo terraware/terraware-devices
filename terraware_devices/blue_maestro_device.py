@@ -37,6 +37,7 @@ class BlueMaestroDevice(TerrawareDevice):
     def __init__(self, server_path, label):
         self._server_path = server_path
         self._label = label  # ID from the sticker on the blue maestro device
+        print('created BlueMaestroDevice with label %s' % label)
 
         # most recent values
         self._timestamp = None

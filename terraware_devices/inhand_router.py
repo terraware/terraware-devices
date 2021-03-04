@@ -53,6 +53,7 @@ class InHandRouterDevice(TerrawareDevice):
         self._password = controller.config.router_password
         self._controller = controller
         self._local_sim = local_sim
+        print('created InHandRouterDevice with address %s' % address)
 
     def server_path(self):
         return self._server_path

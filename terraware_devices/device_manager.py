@@ -91,6 +91,7 @@ class DeviceManager(object):
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
         count_added = 0
+        print('device list has %d device infos' % len(device_infos))
         for dev_info in device_infos:
             dev_type = dev_info['type']
             make = dev_info['make']
@@ -117,6 +118,8 @@ class DeviceManager(object):
             if device:
                 self.devices.append(device)
                 count_added += 1
+            else:
+                print('device not recognized; type: %s, make: %s, model: %s' % (dev_type, make, model))
         return count_added
 
     def set_handler(self, handler):
