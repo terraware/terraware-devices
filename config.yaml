@@ -1,4 +1,4 @@
 device_diagnostics: 0
-load_from_server: 1
 bluetooth_interface: 0
 bluetooth_scan_timeout: 10
+router_password: test
