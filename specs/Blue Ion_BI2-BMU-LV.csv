@@ -1,0 +1,5 @@
+name,type,scale_factor,address,send_to_server
+relative_state_of_charge,uint16,0.1,0x4b,1
+system_voltage,uint32,0.001,0x41,1
+system_current,sint32,0.001,0x39,1
+state_of_health,uint16,0.1,0x50,1

@@ -98,6 +98,8 @@ class DeviceManager(object):
             model = dev_info['model']
             server_path = dev_info['serverPath']
             address = dev_info['address']
+            protocol = dev_info.get('protocol')
+            polling_interval = dev_info['pollingInterval']
 
             # initialize a device based on the make/model/type
             device = None
@@ -106,10 +108,9 @@ class DeviceManager(object):
                 self.has_bluetooth_devices = True
             elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
                 device = InHandRouterDevice(self.controller, server_path, address, self.local_sim)
-            elif dev_info['protocol'] == 'modbus':
+            elif protocol == 'modbus':
                 port = dev_info['port']
                 settings = dev_info['settings']
-                polling_interval = dev_info['pollingInterval']
                 spec_file_name = 'specs/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
                 device = ModbusDevice(self.controller, server_path, address, port, settings, polling_interval, self.diagnostic_mode,
                                       spec_file_name=spec_file_name)
