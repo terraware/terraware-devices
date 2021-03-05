@@ -15,10 +15,10 @@ from typing import List
 import requests
 from rhizo.controller import Controller
 from .base import TerrawareDevice
-from .relay_device import RelayDevice
-from .modbus_device import ModbusDevice
+from .relay import RelayDevice
+from .modbus import ModbusDevice
 from .inhand_router import InHandRouterDevice
-from .blue_maestro_device import BlueMaestroDevice, find_blue_maestro_devices
+from .blue_maestro import BlueMaestroDevice, find_blue_maestro_devices
 
 
 # manages a set of devices; each device handles a connection to physical hardware
