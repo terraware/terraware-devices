@@ -17,6 +17,7 @@ from rhizo.controller import Controller
 from .base import TerrawareDevice
 from .relay import RelayDevice
 from .modbus import ModbusDevice
+from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
 from .blue_maestro import BlueMaestroDevice, find_blue_maestro_devices
 
@@ -91,7 +92,7 @@ class DeviceManager(object):
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
         count_added = 0
-        print('device list has %d device infos' % len(device_infos))
+        print('device list has information for %d device(s)' % len(device_infos))
         for dev_info in device_infos:
             dev_type = dev_info['type']
             make = dev_info['make']
@@ -106,6 +107,8 @@ class DeviceManager(object):
             if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
                 device = BlueMaestroDevice(server_path, address)
                 self.has_bluetooth_devices = True
+            elif dev_type == 'server' and make == 'Raspberry Pi':
+                device = RasPiDevice(self.controller, server_path, self.local_sim)
             elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
                 device = InHandRouterDevice(self.controller, server_path, address, self.local_sim)
             elif protocol == 'modbus':
@@ -182,9 +185,10 @@ class DeviceManager(object):
                         device_path = self.controller.path_on_server() + '/' + device.server_path()
                         seq_values[device_path + '/temperature'] = temperature
                         seq_values[device_path + '/humidity'] = humidity
-                        print('    %s/temperature: %.2f' % (device_path, temperature))
-                        print('    %s/humidity: %.2f' % (device_path, humidity))
-            print('updating %d sequences' % len(seq_values))
+                        if False:  # use device verbose flag?
+                            print('    %s/temperature: %.2f' % (device_path, temperature))
+                            print('    %s/humidity: %.2f' % (device_path, humidity))
+            print('updating %d blue maestro sequences' % len(seq_values))
             self.controller.sequences.update_multiple(seq_values)
 
             # sleep until next cycle
