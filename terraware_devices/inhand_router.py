@@ -46,17 +46,12 @@ def poll_router(host, username, password):
 # performs monitoring of the InHand Networks IR915L 4G router
 class InHandRouterDevice(TerrawareDevice):
 
-    def __init__(self, controller, server_path, address, local_sim):
-        self._server_path = server_path
+    def __init__(self, address, password, local_sim):
         self._address = address
         self._username = "adm"
-        self._password = controller.config.router_password
-        self._controller = controller
+        self._password = password
         self._local_sim = local_sim
         print('created InHandRouterDevice with address %s' % address)
-
-    def server_path(self):
-        return self._server_path
 
     def reconnect(self):
         pass
@@ -69,15 +64,3 @@ class InHandRouterDevice(TerrawareDevice):
         else:
             values = poll_router(self._address, self._username, self._password)
         return values
-
-    def run(self):
-        controller_path = self._controller.path_on_server()
-        while True:
-            status = self.poll()
-            seq_values = {}
-            for name, value in status.items():
-                full_path = controller_path + '/' + self._server_path + '/' + name
-                seq_values[full_path] = value
-                print('    %s/%s: %.2f' % (self._server_path, name, value))
-            self._controller.sequences.update_multiple(seq_values)
-            gevent.sleep(60)

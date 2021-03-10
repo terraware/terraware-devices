@@ -61,12 +61,13 @@ class DeviceManager(object):
                         polling_interval = int(line['polling_interval'])
                         if device_type == 'relay':
                             port = int(line['port'])
-                            device = RelayDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode)
+                            device = RelayDevice(host, port, settings, self.diagnostic_mode)
                         elif device_type == 'modbus':
                             port = int(line['port'])
-                            device = ModbusDevice(self.controller, server_path, host, port, settings, polling_interval, self.diagnostic_mode)
+                            spec_file_name = 'config/%s.csv' % server_path
+                            device = ModbusDevice(host, port, settings, self.diagnostic_mode, spec_file_name)
                         elif device_type == 'blue-maestro':
-                            device = BlueMaestroDevice(server_path, host)
+                            device = BlueMaestroDevice(host)
                             self.has_bluetooth_devices = True
                         else:
                             print('unrecognized device type: %s' % device_type)
@@ -105,21 +106,22 @@ class DeviceManager(object):
             # initialize a device based on the make/model/type
             device = None
             if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
-                device = BlueMaestroDevice(server_path, address)
+                device = BlueMaestroDevice(address)
                 self.has_bluetooth_devices = True
             elif dev_type == 'server' and make == 'Raspberry Pi':
-                device = RasPiDevice(self.controller, server_path, self.local_sim)
+                device = RasPiDevice(self.local_sim)
             elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
-                device = InHandRouterDevice(self.controller, server_path, address, self.local_sim)
+                device = InHandRouterDevice(address, self.controller.config.router_password, self.local_sim)
             elif protocol == 'modbus':
                 port = dev_info['port']
                 settings = dev_info['settings']
                 spec_file_name = 'specs/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
-                device = ModbusDevice(self.controller, server_path, address, port, settings, polling_interval, self.diagnostic_mode,
-                                      spec_file_name=spec_file_name)
+                device = ModbusDevice(address, port, settings, self.diagnostic_mode, spec_file_name)
 
             # if a device was created, add it to our collection
             if device:
+                device.set_server_path(server_path)
+                device.set_polling_interval(polling_interval)
                 self.devices.append(device)
                 count_added += 1
             else:
@@ -133,10 +135,25 @@ class DeviceManager(object):
         if self.handler:
             self.handler.handle_message(message_type, params)
 
-    # launch device polling greenlets
+    # run this function as a greenlet, polling the given device
+    def polling_loop(self, device):
+        controller_path = self.controller.path_on_server()
+        while True:
+            values = device.poll()
+            seq_values = {}
+            for name, value in values.items():
+                seq_rel_path = device.server_path + '/' + name
+                full_path = controller_path + '/' + seq_rel_path
+                seq_values[full_path] = value
+                self.controller.sequences.update_value(seq_rel_path, value)
+                print('    %s/%s: %.2f' % (device.server_path, name, value))
+            self.controller.sequences.update_multiple(seq_values)
+            gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
+
+    # launch device polling greenlets and run handlers
     def run(self):
         for device in self.devices:
-            device.greenlet = gevent.spawn(device.run)
+            device.greenlet = gevent.spawn(self.polling_loop, device)
         if self.has_bluetooth_devices:
             gevent.spawn(self.update_bluetooth_devices)
         self.start_time = time.time()
@@ -181,8 +198,7 @@ class DeviceManager(object):
                     if hasattr(device, 'label') and device.label() == label:
                         temperature = dev_info['temperature']
                         humidity = dev_info['humidity']
-                        device.update(timestamp, temperature, humidity, dev_info['rssi'])
-                        device_path = self.controller.path_on_server() + '/' + device.server_path()
+                        device_path = self.controller.path_on_server() + '/' + device.server_path
                         seq_values[device_path + '/temperature'] = temperature
                         seq_values[device_path + '/humidity'] = humidity
                         if False:  # use device verbose flag?
@@ -197,7 +213,7 @@ class DeviceManager(object):
     # find a device by server_path
     def find(self, server_path):
         for device in self.devices:
-            if device.server_path() == server_path:
+            if device.server_path == server_path:
                 return device
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
@@ -208,7 +224,7 @@ class DeviceManager(object):
             devices_ok = True
             for device in self.devices:
                 if device.last_update_time is None or time.time() - device.last_update_time > 10 * 60:
-                    logging.info('no recent update for device %s; reconnecting', device.server_path())
+                    logging.info('no recent update for device %s; reconnecting', device.server_path)
                     device.reconnect()
                     devices_ok = False
 

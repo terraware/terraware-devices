@@ -13,34 +13,21 @@ from .base import TerrawareDevice
 
 class RelayDevice(TerrawareDevice):
 
-    def __init__(self, controller, server_path, host, port, settings, polling_interval, diagnostic_mode):
-        print('initializing device %s (%s:%d)' % (server_path, host, port))
-        self._controller = controller
-        self._server_path = server_path
+    def __init__(self, host, port, settings, diagnostic_mode):
         self._host = host
         self._port = port
-        self._polling_interval = polling_interval
         self._last_update_time = None
         self._sim_state = 0
-
-    def server_path(self):
-        return self._server_path
+        print('created relay device (%s:%d)' % (host, port))
 
     def reconnect(self):
         pass
 
-    def run(self):
-        logging.info('starting relay monitoring/control for %s; polling interval: %.1fs', self._server_path, self._polling_interval)
-        while True:
-            print('polling %s now' % self._server_path)
-            v = self.read_state()
-            seq_rel_path = self._server_path + '/relay-1'
-            if False:
-                print('    %s: %d' % (seq_rel_path, v))
-            self._controller.sequences.update(seq_rel_path, v)
-            self._controller.sequences.update_value(seq_rel_path, v)
-            self._last_update_time = time.time()
-            gevent.sleep(self._polling_interval)
+    def poll(self):
+        self._last_update_time = time.time()
+        return {
+            'relay-1': self.read_state(),
+        }
 
     def read_state(self):
         if self._host == 'sim':

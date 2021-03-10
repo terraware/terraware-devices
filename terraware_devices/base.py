@@ -9,19 +9,17 @@ class TerrawareDevice(ABC):
     """What time the device was last updated."""
 
     @abstractmethod
-    def run(self) -> None:
-        """Main loop for this device.
-
-        This method is run in a greenlet and should not return. It should use gevent to perform blocking operations.
-        """
-        ...
-
-    @abstractmethod
     def reconnect(self) -> None:
         """Reconnect to the device."""
         ...
 
     @abstractmethod
-    def server_path(self) -> str:
-        """Return the server-side path of this device."""
+    def poll(self) -> dict:
+        """Return a dictionary of values obtained from the hardware."""
         ...
+
+    def set_server_path(self, path: str) -> None:
+        self.server_path = path
+
+    def set_polling_interval(self, polling_interval: float) -> None:
+        self.polling_interval = polling_interval

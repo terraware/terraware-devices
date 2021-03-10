@@ -34,34 +34,18 @@ def find_blue_maestro_devices(iface=0, timeout=2, verbose=False):
 
 class BlueMaestroDevice(TerrawareDevice):
 
-    def __init__(self, server_path, label):
-        self._server_path = server_path
+    def __init__(self, label):
         self._label = label  # ID from the sticker on the blue maestro device
         print('created BlueMaestroDevice with label %s' % label)
-
-        # most recent values
-        self._timestamp = None
-        self._temperature = None
-        self._humidity = None
-        self._rssi = None
-
-    def server_path(self):
-        return self._server_path
 
     def label(self):
         return self._label
 
-    def update(self, timestamp, temperature, humidity, rssi):
-        self._timestamp = timestamp
-        self._temperature = temperature
-        self._humidity = humidity
-        self._rssi = rssi
-
     def reconnect(self):
         pass
 
-    def run(self):
-        pass
+    def poll(self):  # polling for Blue Maestro devices is handled in device manager (update_bluetooth_devices)
+        return {}
 
 
 if __name__ == "__main__":
