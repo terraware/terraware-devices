@@ -8,6 +8,8 @@ It runs as a service on the Terraware [Balena stack](https://github.com/terrawar
 
 If you are running the code under Balena, you may need to set these service variables:
 
+*   `RHIZO_MQTT_USERNAME`: the username to send to Mosquitto
+*   `RHIZO_MQTT_PASSWORD`: the password to send to Mosquitto
 *   `RHIZO_SECRET_KEY`: the secret key required by the web server
 *   `RHIZO_ROUTER_PASSWORD`: the admin password for the 4G router (only needed if monitoring router state)
 

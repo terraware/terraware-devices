@@ -12,4 +12,4 @@ gevent>=20.9
 pymodbus~=2.4
 
 # rhizo-server API is under development, so minor versions might have breaking changes
-rhizo-client~=0.1.3
+rhizo-client~=0.1.4
