@@ -13,7 +13,7 @@ from .base import TerrawareDevice
 
 class ModbusDevice(TerrawareDevice):
 
-    def __init__(self, host, port, settings, diagnostic_mode, spec_file_name):
+    def __init__(self, host, port, settings, diagnostic_mode, local_sim, spec_file_name):
         settings_items = settings.split(';')
         self._host = host
         self._unit = 1  # aka modbus slave number
@@ -26,6 +26,7 @@ class ModbusDevice(TerrawareDevice):
         self._modbus_client = ModbusTcpClient(host, port=port, framer=framer)
         self._read_holding = ('holding' in settings_items)
         self._seq_infos = []
+        self._local_sim = local_sim
 
         # load seqeuence info
         with open(spec_file_name) as csvfile:
@@ -39,7 +40,7 @@ class ModbusDevice(TerrawareDevice):
         self._modbus_client.connect()
 
     def poll(self):
-        if self._host != 'sim' and not self._modbus_client.is_socket_open():
+        if (not self._local_sim) and (not self._modbus_client.is_socket_open()):
             self._modbus_client.connect()
         values = {}
         for seq_info in self._seq_infos:
@@ -59,7 +60,7 @@ class ModbusDevice(TerrawareDevice):
         return values
 
     def read_register(self, address, register_type, unit):
-        if self._host == 'sim':
+        if self._local_sim:
             return random.randint(1, 100)
         if register_type.endswith('32'):
             count = 2

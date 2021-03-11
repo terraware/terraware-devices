@@ -68,7 +68,7 @@ class DeviceManager(object):
                         elif device_type == 'modbus':
                             port = int(line['port'])
                             spec_file_name = 'config/%s.csv' % server_path
-                            device = ModbusDevice(host, port, settings, self.diagnostic_mode, spec_file_name)
+                            device = ModbusDevice(host, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
                         elif device_type == 'blue-maestro':
                             device = BlueMaestroDevice(host)
                             self.has_bluetooth_devices = True
@@ -119,7 +119,7 @@ class DeviceManager(object):
                 port = dev_info['port']
                 settings = dev_info['settings']
                 spec_file_name = 'specs/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
-                device = ModbusDevice(address, port, settings, self.diagnostic_mode, spec_file_name)
+                device = ModbusDevice(address, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
 
             # if a device was created, add it to our collection
             if device:
