@@ -9,11 +9,14 @@ import json
 import gevent
 import random
 import logging
+import base64  # temp for forwarding data to cloud server
+import datetime  # temp for forwarding data to cloud server
 from typing import List
 
 # other imports
 import requests
 from rhizo.controller import Controller
+from rhizo.resources import send_request  # temp for forwarding data to cloud server
 from .base import TerrawareDevice
 from .relay import RelayDevice
 from .modbus import ModbusDevice
@@ -138,16 +141,22 @@ class DeviceManager(object):
     # run this function as a greenlet, polling the given device
     def polling_loop(self, device):
         controller_path = self.controller.path_on_server()
+        cloud_controller_path = self.controller.config.get('cloud_path')
         while True:
             values = device.poll()
             seq_values = {}
+            cloud_seq_values = {}
             for name, value in values.items():
                 seq_rel_path = device.server_path + '/' + name
-                full_path = controller_path + '/' + seq_rel_path
-                seq_values[full_path] = value
+                seq_values[controller_path + '/' + seq_rel_path] = value
+                if cloud_controller_path:
+                    cloud_seq_values[cloud_controller_path + '/' + seq_rel_path] = value
                 self.controller.sequences.update_value(seq_rel_path, value)
                 print('    %s/%s: %.2f' % (device.server_path, name, value))
-            self.controller.sequences.update_multiple(seq_values)
+            if seq_values:
+                self.controller.sequences.update_multiple(seq_values)
+                if cloud_controller_path and 'BMU' in device.server_path:  # just send BMU values for now
+                    self.send_to_cloud_server(cloud_seq_values)
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
 
     # launch device polling greenlets and run handlers
@@ -231,6 +240,23 @@ class DeviceManager(object):
             # if all devices are updating, send a watchdog message to server
             if devices_ok:
                 self.controller.send_message('watchdog', {})
+
+    # temporary code for forwarding data to cloud server
+    def send_to_cloud_server(self, values):
+        server_name = self.controller.config.cloud_server
+        secure = not server_name.startswith('127.0.0.1')
+        secret_key = self.controller.config.cloud_secret_key
+        basic_auth = base64.b64encode(('dev-mgr:' + secret_key).encode('utf-8')).decode()  # send secret key as password
+        send_values = {k: str(v) for k, v in values.items()}  # make sure values are strings
+        params = {
+            'values': json.dumps(send_values),
+            'timestamp': datetime.datetime.utcnow().isoformat() + ' Z',
+        }
+        (status, reason, data) = send_request(server_name, 'PUT', '/api/v1/resources', params, secure, 'text/plain', basic_auth)
+        if status == 200:
+            print('sent %d values to cloud server' % len(values))
+        else:
+            print('error sending values to cloud server')
 
 
 if __name__ == '__main__':
