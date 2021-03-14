@@ -143,7 +143,12 @@ class DeviceManager(object):
         controller_path = self.controller.path_on_server()
         cloud_controller_path = self.controller.config.get('cloud_path')
         while True:
-            values = device.poll()
+            try:
+                values = device.poll()
+            except Exception as e:
+                print('error polling device %s' % device.server_path)
+                print(e)
+                values = {}
             seq_values = {}
             cloud_seq_values = {}
             for name, value in values.items():
@@ -201,6 +206,7 @@ class DeviceManager(object):
 
             # update our device objects and send values to server
             seq_values = {}
+            found_count = 0
             for dev_info in dev_infos:
                 label = dev_info['label']
                 for device in self.devices:
@@ -210,11 +216,9 @@ class DeviceManager(object):
                         device_path = self.controller.path_on_server() + '/' + device.server_path
                         seq_values[device_path + '/temperature'] = temperature
                         seq_values[device_path + '/humidity'] = humidity
-                        if False:  # use device verbose flag?
-                            print('    %s/temperature: %.2f' % (device_path, temperature))
-                            print('    %s/humidity: %.2f' % (device_path, humidity))
-            print('updating %d blue maestro sequences' % len(seq_values))
+                        found_count += 1
             self.controller.sequences.update_multiple(seq_values)
+            print('blue maestro devices detected: %d, updated: %d' % (len(dev_infos), found_count))
 
             # sleep until next cycle
             gevent.sleep(15)
