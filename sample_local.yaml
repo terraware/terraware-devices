@@ -1,0 +1,6 @@
+server_name: 127.0.0.1:5000
+secret_key: api_key_for_server
+enable_server: 1
+local_device_file_name: ../sample_devices.json
+local_sim: 1
+router_password: test

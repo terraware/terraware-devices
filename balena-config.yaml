@@ -10,7 +10,6 @@ enable_ws: false
 load_from_server: 1
 mqtt_host: localhost
 mqtt_port: 1883
-mqtt_request_credentials: true
 mqtt_tls: false
 secure_server: false
 server_name: 'localhost:8080'
