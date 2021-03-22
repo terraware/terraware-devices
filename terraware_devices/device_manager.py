@@ -256,11 +256,15 @@ class DeviceManager(object):
             'values': json.dumps(send_values),
             'timestamp': datetime.datetime.utcnow().isoformat() + ' Z',
         }
-        (status, reason, data) = send_request(server_name, 'PUT', '/api/v1/resources', params, secure, 'text/plain', basic_auth)
-        if status == 200:
-            print('sent %d values to cloud server' % len(values))
-        else:
+        try:
+            (status, reason, data) = send_request(server_name, 'PUT', '/api/v1/resources', params, secure, 'text/plain', basic_auth)
+            if status == 200:
+                print('sent %d values to cloud server' % len(values))
+            else:
+                print('error sending values to cloud server; status: %d' % status)
+        except Exception as e:
             print('error sending values to cloud server')
+            print(e)
 
 
 if __name__ == '__main__':
