@@ -185,6 +185,7 @@ class DeviceManager(object):
 
     # a greenlet for update bluetooth devices
     def update_bluetooth_devices(self):
+        sequences_created = {}
         interface = self.controller.config.bluetooth_interface
         scan_timeout = self.controller.config.bluetooth_scan_timeout
         while True:
@@ -211,12 +212,16 @@ class DeviceManager(object):
                 label = dev_info['label']
                 for device in self.devices:
                     if hasattr(device, 'label') and device.label() == label:
-                        temperature = dev_info['temperature']
-                        humidity = dev_info['humidity']
                         device_path = self.controller.path_on_server() + '/' + device.server_path
-                        seq_values[device_path + '/temperature'] = temperature
-                        seq_values[device_path + '/humidity'] = humidity
+
+                        for metric in ['temperature', 'humidity']:
+                            metric_path = device_path + '/' + metric
+                            seq_values[metric_path] = dev_info[metric]
+                            if label not in sequences_created:
+                                self.controller.sequences.create(metric_path, 'numeric', decimal_places=2)
+                        sequences_created[label] = True
                         found_count += 1
+
             self.controller.sequences.update_multiple(seq_values)
             print('blue maestro devices detected: %d, updated: %d' % (len(dev_infos), found_count))
 
