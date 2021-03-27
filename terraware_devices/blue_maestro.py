@@ -49,7 +49,7 @@ def process_ubertooth_line(line, device_info):
                 device_info['rssi'] = part.split('=')[1]
     elif line.startswith('AdvA:'):
         parts = line.split()
-        device_info['label'] = parts[-2].replace(':', '').upper()
+        device_info['label'] = parts[-2].replace(':', '').upper()[:8]
     elif line.startswith('AdvData:'):
         parts = line.split()
         if len(parts) >= 18:
