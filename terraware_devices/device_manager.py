@@ -188,6 +188,7 @@ class DeviceManager(object):
         sequences_created = {}
         interface = self.controller.config.bluetooth_interface
         scan_timeout = self.controller.config.bluetooth_scan_timeout
+        use_ubertooth = self.controller.config.get('use_ubertooth', False)
         while True:
             timestamp = time.time()
 
@@ -203,7 +204,7 @@ class DeviceManager(object):
                             'rssi': -random.randint(40, 70),
                         })
             else:
-                dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface)
+                dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface, ubertooth=use_ubertooth)
 
             # update our device objects and send values to server
             seq_values = {}
