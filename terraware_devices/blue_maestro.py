@@ -34,7 +34,7 @@ def ubertooth_scan(iface=0, timeout=10, verbose=False):
         print('processed %d lines' % line_count)
         print('found %d readings' % reading_count)
         print('found %d sensors' % len(device_infos))
-    return device_infos
+    return list(device_infos.values())  # want to return a list, not a dictionary
 
 
 # processes a line of output from ubertooth-btle;
