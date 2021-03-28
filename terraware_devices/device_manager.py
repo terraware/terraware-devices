@@ -219,25 +219,30 @@ class DeviceManager(object):
             # update our device objects and send values to server
             seq_values = {}
             found_count = 0
+            not_found_labels = []
             for dev_info in dev_infos:
                 label = dev_info['label']
+                found = False
                 for device in self.devices:
                     if hasattr(device, 'label') and device.label() == label:
                         device_path = self.controller.path_on_server() + '/' + device.server_path
-
-                        for metric in ['temperature', 'humidity']:
+                        for metric in ['temperature', 'humidity', 'rssi']:
                             metric_path = device_path + '/' + metric
                             seq_values[metric_path] = dev_info[metric]
                             if label not in sequences_created:
                                 self.controller.sequences.create(metric_path, 'numeric', decimal_places=2)
                         sequences_created[label] = True
                         found_count += 1
-
+                        found = True
+                if not found:
+                    not_found_labels.append(label)
             self.controller.sequences.update_multiple(seq_values)
             print('blue maestro devices detected: %d, updated: %d' % (len(dev_infos), found_count))
+            if not_found_labels:
+                print('blue maestro devices not found in device list: %s' % (', '.join(not_found_labels)))
 
             # sleep until next cycle
-            gevent.sleep(15)
+            gevent.sleep(30)
 
     # find a device by server_path
     def find(self, server_path):
