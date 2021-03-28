@@ -35,11 +35,11 @@ def poll_router(host, username, password):
     signal_strength = 0
     for line in status_lines:
         if 'Signal Level' in line:
-            signal_stength = int(line.split(':')[1].split('a')[0])
+            signal_strength = int(line.split(':')[1].split('a')[0])
     proc.sendline('exit')
     proc.sendline('Y')
     return {
-        'signal_stength': signal_stength
+        'signal_stength': signal_strength
     }
 
 

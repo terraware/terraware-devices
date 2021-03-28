@@ -44,6 +44,7 @@ class DeviceManager(object):
         else:
             self.load_from_server()
         self.controller.messages.add_handler(self)
+        self.sequences_created = set()
 
     # initialize devices using a JSON file
     def load_from_file(self, device_list_file_name):
@@ -148,6 +149,11 @@ class DeviceManager(object):
         if self.handler:
             self.handler.handle_message(message_type, params)
 
+    def create_sequence(self, full_sequence_path, data_type, decimal_places):
+        if full_sequence_path not in self.sequences_created:
+            self.controller.sequences.create(full_sequence_path, data_type, decimal_places=decimal_places)
+            self.sequences_created.add(full_sequence_path)
+
     # run this function as a greenlet, polling the given device
     def polling_loop(self, device):
         controller_path = self.controller.path_on_server()
@@ -162,11 +168,13 @@ class DeviceManager(object):
             seq_values = {}
             cloud_seq_values = {}
             for name, value in values.items():
-                seq_rel_path = device.server_path + '/' + name
-                seq_values[controller_path + '/' + seq_rel_path] = value
+                rel_seq_path = device.server_path + '/' + name
+                full_seq_path = controller_path + '/' + rel_seq_path
+                seq_values[full_seq_path] = value
+                self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device
                 if cloud_controller_path:
-                    cloud_seq_values[cloud_controller_path + '/' + seq_rel_path] = value
-                self.controller.sequences.update_value(seq_rel_path, value)
+                    cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
+                self.controller.sequences.update_value(rel_seq_path, value)
                 print('    %s/%s: %.2f' % (device.server_path, name, value))
             if seq_values:
                 self.controller.sequences.update_multiple(seq_values)
@@ -195,7 +203,6 @@ class DeviceManager(object):
 
     # a greenlet for update bluetooth devices
     def update_bluetooth_devices(self):
-        sequences_created = {}
         interface = self.controller.config.bluetooth_interface
         scan_timeout = self.controller.config.bluetooth_scan_timeout
         use_ubertooth = self.controller.config.get('use_ubertooth', False)
@@ -214,7 +221,12 @@ class DeviceManager(object):
                             'rssi': -random.randint(40, 70),
                         })
             else:
-                dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface, ubertooth=use_ubertooth)
+                try:
+                    dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface, ubertooth=use_ubertooth)
+                except Exception as e:
+                    print('error in find_blue_maestro_devices')
+                    print(e)
+                    dev_infos = {}
 
             # update our device objects and send values to server
             seq_values = {}
@@ -229,9 +241,7 @@ class DeviceManager(object):
                         for metric in ['temperature', 'humidity', 'rssi']:
                             metric_path = device_path + '/' + metric
                             seq_values[metric_path] = dev_info[metric]
-                            if label not in sequences_created:
-                                self.controller.sequences.create(metric_path, 'numeric', decimal_places=2)
-                        sequences_created[label] = True
+                            self.create_sequence(metric_path, 'numeric', decimal_places=2)  # TODO: determine data type and decimal places from device
                         found_count += 1
                         found = True
                 if not found:

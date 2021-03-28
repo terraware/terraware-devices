@@ -19,14 +19,15 @@ def ubertooth_scan(iface=0, timeout=10, verbose=False):
     reading_count = 0
     device_infos = {}
     device_info = {}
-    for line in iter(proc.stdout.readline, ''):
-        line = line.decode().rstrip()
-        line_count += 1
-        done = process_ubertooth_line(line, device_info)
-        if done and 'label' in device_info and 'temperature' in device_info and device_info['temperature'] < 100:
-            reading_count += 1
-            device_infos[device_info['label']] = device_info.copy()
-            device_info = {}
+    for line in iter(proc.stdout.readline, None):
+        if line:
+            line = line.decode().rstrip()
+            line_count += 1
+            done = process_ubertooth_line(line, device_info)
+            if done and 'label' in device_info and 'temperature' in device_info and device_info['temperature'] < 100:
+                reading_count += 1
+                device_infos[device_info['label']] = device_info.copy()
+                device_info = {}
         if time.time() - start_time > timeout:
             break
     proc.terminate()
