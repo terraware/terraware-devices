@@ -45,11 +45,21 @@ class DeviceManager(object):
             self.load_from_server()
         self.controller.messages.add_handler(self)
 
-    # initialize devices using a JSON file (with same format as device list from server)
+    # initialize devices using a JSON file
     def load_from_file(self, device_list_file_name):
         if device_list_file_name.endswith('json'):
             with open(device_list_file_name) as json_file:
-                device_infos = json.loads(json_file.read())['devices']
+                site_info = json.loads(json_file.read())
+                site_module_names = {}  # name by ID
+                for site_module in site_info.get('siteModules', []):
+                    site_module_names[site_module['id']] = site_module['name']
+                device_infos = site_info['devices']
+                for device_info in device_infos:  # support files in the site format (which is a bit different from the device API response format)
+                    if 'deviceType' in device_info:
+                        device_info['type'] = device_info['deviceType']
+                        del device_info['deviceType']
+                    if not 'serverPath' in device_info and 'siteModuleId' in device_info:
+                        device_info['serverPath'] = site_module_names[device_info['siteModuleId']] + '/' + device_info['name']  # assumes site module found
                 count_added = self.create_devices(device_infos)
         else:  # will remove this case after migrate away from CSV device list
             with open(device_list_file_name) as csvfile:
