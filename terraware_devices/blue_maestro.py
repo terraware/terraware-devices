@@ -1,4 +1,5 @@
 import time
+import select
 import subprocess
 from .base import TerrawareDevice
 
@@ -13,14 +14,18 @@ def find_blue_maestro_devices(iface=0, timeout=2, verbose=False, ubertooth=False
 
 # returns a list of currently accessible Blue Maestro devices; each device is returned as a dictionary of information
 def ubertooth_scan(iface=0, timeout=10, verbose=False):
-    proc = subprocess.Popen(['ubertooth-btle', '-U%d' % iface, '-n'], stdout=subprocess.PIPE)
+    proc = subprocess.Popen(['ubertooth-btle', '-U%d' % iface, '-n'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    poller = select.poll()
+    poller.register(proc.stdout, select.POLLIN)
     start_time = time.time()
     line_count = 0
     reading_count = 0
     device_infos = {}
     device_info = {}
-    for line in iter(proc.stdout.readline, None):
-        if line:
+    while time.time() - start_time < timeout:
+        status = poller.poll(0)
+        if status:
+            line = proc.stdout.readline()
             line = line.decode().rstrip()
             line_count += 1
             done = process_ubertooth_line(line, device_info)
