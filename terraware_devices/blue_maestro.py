@@ -22,6 +22,7 @@ def ubertooth_scan(iface=0, timeout=10, verbose=False):
     global uber_proc
     global uber_poller
     if uber_proc is None:
+        print('starting ubertooth-btle process')
         uber_proc = subprocess.Popen(['ubertooth-btle', '-U%d' % iface, '-n'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         uber_poller = select.poll()
         uber_poller.register(uber_proc.stdout, select.POLLIN)
