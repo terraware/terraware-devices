@@ -1,3 +1,4 @@
+import sys
 from terraware_devices.blue_maestro import find_blue_maestro_devices
 
 
@@ -14,4 +15,7 @@ def run_scan():
 
 
 if __name__ == '__main__':
-    run_scan()
+    count = int(sys.argv[0]) if len(sys.argv) > 2 else 1
+    print('doing %d scan(s)' % count)
+    for i in range(count):
+        run_scan()

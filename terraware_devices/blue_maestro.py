@@ -4,6 +4,11 @@ import subprocess
 from .base import TerrawareDevice
 
 
+# internal state used by ubertooth_scan; could move into device manager
+uber_proc = None
+uber_poller = None
+
+
 # returns a list of currently accessible Blue Maestro devices; each device is returned as a dictionary of information
 def find_blue_maestro_devices(iface=0, timeout=2, verbose=False, ubertooth=False):
     if ubertooth:
@@ -14,18 +19,21 @@ def find_blue_maestro_devices(iface=0, timeout=2, verbose=False, ubertooth=False
 
 # returns a list of currently accessible Blue Maestro devices; each device is returned as a dictionary of information
 def ubertooth_scan(iface=0, timeout=10, verbose=False):
-    proc = subprocess.Popen(['ubertooth-btle', '-U%d' % iface, '-n'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    poller = select.poll()
-    poller.register(proc.stdout, select.POLLIN)
+    global uber_proc
+    global uber_poller
+    if uber_proc is None:
+        uber_proc = subprocess.Popen(['ubertooth-btle', '-U%d' % iface, '-n'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        uber_poller = select.poll()
+        uber_poller.register(uber_proc.stdout, select.POLLIN)
     start_time = time.time()
     line_count = 0
     reading_count = 0
     device_infos = {}
     device_info = {}
     while time.time() - start_time < timeout:
-        status = poller.poll(0)
+        status = uber_poller.poll(0)
         if status:
-            line = proc.stdout.readline()
+            line = uber_proc.stdout.readline()
             line = line.decode().rstrip()
             line_count += 1
             done = process_ubertooth_line(line, device_info)
@@ -35,7 +43,7 @@ def ubertooth_scan(iface=0, timeout=10, verbose=False):
                 device_info = {}
         if time.time() - start_time > timeout:
             break
-    proc.terminate()
+    #proc.terminate()
     if verbose:
         print('processed %d lines' % line_count)
         print('found %d readings' % reading_count)
