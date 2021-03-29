@@ -15,7 +15,7 @@ def run_scan():
 
 
 if __name__ == '__main__':
-    count = int(sys.argv[0]) if len(sys.argv) > 2 else 1
+    count = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     print('doing %d scan(s)' % count)
     for i in range(count):
         run_scan()
