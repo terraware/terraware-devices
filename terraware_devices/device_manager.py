@@ -99,7 +99,7 @@ class DeviceManager(object):
         if r.status_code == 200:
             device_infos = r.json()['devices']
         else:
-            print('error reading devices from server %s' % server_name)
+            print('error reading devices from server %s; status code: %d' % (server_name, r.status_code))
             return
         count_added = self.create_devices(device_infos)
         print('loaded %d devices from %s' % (count_added, server_name))
