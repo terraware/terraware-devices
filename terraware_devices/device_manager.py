@@ -105,8 +105,7 @@ class DeviceManager(object):
                 device_infos = r.json()['devices']
             except Exception as ex:
                 print('error requesting devices from server %s: %s' % (server_name, ex))
-
-            time.sleep(10)
+                gevent.sleep(10)
 
         count_added = self.create_devices(device_infos)
         print('loaded %d devices from %s' % (count_added, server_name))
