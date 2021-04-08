@@ -91,16 +91,23 @@ class DeviceManager(object):
                             count_added += 1
         print('loaded %d devices from %s' % (count_added, device_list_file_name))
 
-    # initialize devices using JSON data from server
+    # initialize devices using JSON data from server; retry until success
     def load_from_server(self):
         server_name = self.controller.config.server_name
         secret_key = self.controller.config.secret_key
-        r = requests.get('http://' + server_name + '/api/v1/device/all/config', auth=('', secret_key))
-        if r.status_code == 200:
-            device_infos = r.json()['devices']
-        else:
-            print('error reading devices from server %s; status code: %d' % (server_name, r.status_code))
-            return
+        url = 'http://' + server_name + '/api/v1/device/all/config'
+        device_infos = None
+
+        while device_infos is None:
+            try:
+                r = requests.get(url, auth=('', secret_key))
+                r.raise_for_status()
+                device_infos = r.json()['devices']
+            except Exception as ex:
+                print('error requesting devices from server %s: %s' % (server_name, ex))
+
+            time.sleep(10)
+
         count_added = self.create_devices(device_infos)
         print('loaded %d devices from %s' % (count_added, server_name))
 
