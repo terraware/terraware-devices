@@ -1,0 +1,20 @@
+name,type,scale_factor,address,send_to_server,units,decimal_places
+System Status,uint16,1,0x12a,1,,0
+AC Power,sint16,10,0x77,1,W,0
+System Power,sint16,10,0x12c,1,W,0
+System Info,uint16,1,0x1b6,0,,0
+BATT Power,sint16,10,0xb9,1,W,0
+PV Power,sint16,10,0xf9,1,W,0
+AC Status,uint16,1,0x60,1,,0
+BATT Status,uint16,1,0xa0,0,,0
+PV Status,uint16,1,0xe0,1,,0
+AC Mode,uint16,1,0x41,0,,0
+BATT Mode,uint16,1,0x81,0,,0
+PV Mode,uint16,1,0xc1,0,,0
+Startup,uint16,1,0x107,0,,0
+Shutdown,uint16,1,0x108,0,,0
+Fault Status,uint16,1,0x9,1,,0
+Fault Mode,uint16,1,0x0,0,,0
+Fan Status,uint16,1,0x171,1,,0
+Temp,sint16,0.125,0x169,1,C,1
+System Mode,uint16,1,0x10b,0,,0
