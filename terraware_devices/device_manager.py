@@ -9,6 +9,7 @@ import json
 import gevent
 import random
 import logging
+import pathlib
 import base64  # temp for forwarding data to cloud server
 import datetime  # temp for forwarding data to cloud server
 from typing import List
@@ -62,33 +63,6 @@ class DeviceManager(object):
                     if not 'serverPath' in device_info and 'siteModuleId' in device_info:
                         device_info['serverPath'] = site_module_names[device_info['siteModuleId']] + '/' + device_info['name']  # assumes site module found
                 count_added = self.create_devices(device_infos)
-        else:  # will remove this case after migrate away from CSV device list
-            with open(device_list_file_name) as csvfile:
-                reader = csv.DictReader(csvfile)
-                count_added = 0
-                for line in reader:
-                    if int(line['enabled']):
-                        device_type = line['type']
-                        settings = line['settings']
-                        server_path = line['server_path']
-                        host = line['host']
-                        polling_interval = int(line['polling_interval'])
-                        if device_type == 'relay':
-                            port = int(line['port'])
-                            device = RelayDevice(host, port, settings, self.diagnostic_mode)
-                        elif device_type == 'modbus':
-                            port = int(line['port'])
-                            spec_file_name = 'config/%s.csv' % server_path
-                            device = ModbusDevice(host, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
-                        elif device_type == 'blue-maestro':
-                            device = BlueMaestroDevice(host)
-                            self.has_bluetooth_devices = True
-                        else:
-                            print('unrecognized device type: %s' % device_type)
-                            device = None
-                        if device:
-                            self.devices.append(device)
-                            count_added += 1
         print('loaded %d devices from %s' % (count_added, device_list_file_name))
 
     # initialize devices using JSON data from server; retry until success
@@ -113,6 +87,7 @@ class DeviceManager(object):
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
         count_added = 0
+        spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/../specs'
         print('device list has information for %d device(s)' % len(device_infos))
         for dev_info in device_infos:
             dev_type = dev_info['type']
@@ -132,10 +107,14 @@ class DeviceManager(object):
                 device = RasPiDevice(self.local_sim)
             elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
                 device = InHandRouterDevice(address, self.controller.config.router_password, self.local_sim)
+            elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
+                port = dev_info['port']
+                settings = dev_info['settings']
+                device = RelayDevice(address, port, settings, self.diagnostic_mode)
             elif protocol == 'modbus':
                 port = dev_info['port']
                 settings = dev_info['settings']
-                spec_file_name = 'specs/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
+                spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
                 device = ModbusDevice(address, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
 
             # if a device was created, add it to our collection
@@ -181,7 +160,8 @@ class DeviceManager(object):
                 if cloud_controller_path:
                     cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
                 self.controller.sequences.update_value(rel_seq_path, value)
-                print('    %s/%s: %.2f' % (device.server_path, name, value))
+                if self.diagnostic_mode:
+                    print('    %s/%s: %.2f' % (device.server_path, name, value))
             if seq_values:
                 self.controller.sequences.update_multiple(seq_values)
                 if cloud_controller_path and 'BMU' in device.server_path:  # just send BMU values for now
