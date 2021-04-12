@@ -1,11 +1,9 @@
 import time
+import socket
 import logging
+from io import BytesIO
 from xml.etree import ElementTree
 
-try:
-    from httplib import HTTPConnection
-except ModuleNotFoundError:
-    from http.client import HTTPConnection
 import gevent
 
 from .base import TerrawareDevice
@@ -16,15 +14,15 @@ class RelayDevice(TerrawareDevice):
     def __init__(self, host, port, settings, diagnostic_mode):
         self._host = host
         self._port = port
-        self._last_update_time = None
         self._sim_state = 0
+        self.last_update_time = None
         print('created relay device (%s:%d)' % (host, port))
 
     def reconnect(self):
         pass
 
     def poll(self):
-        self._last_update_time = time.time()
+        self.last_update_time = time.time()
         return {
             'relay-1': self.read_state(),
         }
@@ -33,10 +31,7 @@ class RelayDevice(TerrawareDevice):
         if self._host == 'sim':
             xml = self.sample_data()
         else:
-            conn = HTTPConnection('%s:%d' % (self._host, self._port))
-            conn.request('GET', '/state.xml')
-            xml = conn.getresponse().read()
-            conn.close()
+            xml = request_data(self._host, self._port, 'GET', '/state.xml').decode()
         tree = ElementTree.fromstring(xml)
         return int(tree.find('relay1state').text)
 
@@ -44,9 +39,7 @@ class RelayDevice(TerrawareDevice):
         if self._host == 'sim':
             self._sim_state = state
         else:
-            conn = HTTPConnection('%s:%d' % (self._host, self._port))
-            conn.request('GET', '/state.xml?relay1state=%d' % state)
-            conn.close()
+            request_data(self._host, self._port, 'GET', '/state.xml?relay1state=%d' % state)
 
     def sample_data(self):
         return f'''<?xml version='1.0' encoding='utf-8'?>
@@ -56,3 +49,23 @@ class RelayDevice(TerrawareDevice):
                 <relay3state>0</relay3state>
                 <relay4state>0</relay4state>
             </datavalues>'''
+
+
+# request data via HTTP/1.0 but accept a HTTP/0.9 response
+# based on https://stackoverflow.com/questions/27393282/what-is-up-with-python-3-4-and-reading-this-simple-xml-site
+def request_data(host, port, action, url):
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn.connect((host, port))
+    conn.settimeout(1.0)  # this doesn't seem to have an effect
+    message = '%s %s HTTP/1.0\r\n\r\n' % (action, url)
+    conn.send(message.encode())
+    buffer = BytesIO()
+    start_time = time.time()
+    while time.time() - start_time < 1.0:
+        try:
+            chunk = conn.recv(4096)
+            if chunk:
+                buffer.write(chunk)
+        except socket.timeout:
+            break
+    return buffer.getvalue()
