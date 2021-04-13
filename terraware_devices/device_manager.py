@@ -9,6 +9,7 @@ import json
 import gevent
 import random
 import logging
+import pathlib
 import base64  # temp for forwarding data to cloud server
 import datetime  # temp for forwarding data to cloud server
 from typing import List
@@ -44,58 +45,49 @@ class DeviceManager(object):
         else:
             self.load_from_server()
         self.controller.messages.add_handler(self)
+        self.sequences_created = set()
 
-    # initialize devices using a JSON file (with same format as device list from server)
+    # initialize devices using a JSON file
     def load_from_file(self, device_list_file_name):
         if device_list_file_name.endswith('json'):
             with open(device_list_file_name) as json_file:
-                device_infos = json.loads(json_file.read())['devices']
+                site_info = json.loads(json_file.read())
+                site_module_names = {}  # name by ID
+                for site_module in site_info.get('siteModules', []):
+                    site_module_names[site_module['id']] = site_module['name']
+                device_infos = site_info['devices']
+                for device_info in device_infos:  # support files in the site format (which is a bit different from the device API response format)
+                    if 'deviceType' in device_info:
+                        device_info['type'] = device_info['deviceType']
+                        del device_info['deviceType']
+                    if not 'serverPath' in device_info and 'siteModuleId' in device_info:
+                        device_info['serverPath'] = site_module_names[device_info['siteModuleId']] + '/' + device_info['name']  # assumes site module found
                 count_added = self.create_devices(device_infos)
-        else:  # will remove this case after migrate away from CSV device list
-            with open(device_list_file_name) as csvfile:
-                reader = csv.DictReader(csvfile)
-                count_added = 0
-                for line in reader:
-                    if int(line['enabled']):
-                        device_type = line['type']
-                        settings = line['settings']
-                        server_path = line['server_path']
-                        host = line['host']
-                        polling_interval = int(line['polling_interval'])
-                        if device_type == 'relay':
-                            port = int(line['port'])
-                            device = RelayDevice(host, port, settings, self.diagnostic_mode)
-                        elif device_type == 'modbus':
-                            port = int(line['port'])
-                            spec_file_name = 'config/%s.csv' % server_path
-                            device = ModbusDevice(host, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
-                        elif device_type == 'blue-maestro':
-                            device = BlueMaestroDevice(host)
-                            self.has_bluetooth_devices = True
-                        else:
-                            print('unrecognized device type: %s' % device_type)
-                            device = None
-                        if device:
-                            self.devices.append(device)
-                            count_added += 1
         print('loaded %d devices from %s' % (count_added, device_list_file_name))
 
-    # initialize devices using JSON data from server
+    # initialize devices using JSON data from server; retry until success
     def load_from_server(self):
         server_name = self.controller.config.server_name
         secret_key = self.controller.config.secret_key
-        r = requests.get('http://' + server_name + '/api/v1/device/all/config', auth=('', secret_key))
-        if r.status_code == 200:
-            device_infos = r.json()['devices']
-        else:
-            print('error reading devices from server %s' % server_name)
-            return
+        url = 'http://' + server_name + '/api/v1/device/all/config'
+        device_infos = None
+
+        while device_infos is None:
+            try:
+                r = requests.get(url, auth=('', secret_key))
+                r.raise_for_status()
+                device_infos = r.json()['devices']
+            except Exception as ex:
+                print('error requesting devices from server %s: %s' % (server_name, ex))
+                gevent.sleep(10)
+
         count_added = self.create_devices(device_infos)
         print('loaded %d devices from %s' % (count_added, server_name))
 
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
         count_added = 0
+        spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/../specs'
         print('device list has information for %d device(s)' % len(device_infos))
         for dev_info in device_infos:
             dev_type = dev_info['type']
@@ -115,10 +107,14 @@ class DeviceManager(object):
                 device = RasPiDevice(self.local_sim)
             elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
                 device = InHandRouterDevice(address, self.controller.config.router_password, self.local_sim)
+            elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
+                port = dev_info['port']
+                settings = dev_info['settings']
+                device = RelayDevice(address, port, settings, self.diagnostic_mode)
             elif protocol == 'modbus':
                 port = dev_info['port']
                 settings = dev_info['settings']
-                spec_file_name = 'specs/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
+                spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
                 device = ModbusDevice(address, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
 
             # if a device was created, add it to our collection
@@ -138,6 +134,11 @@ class DeviceManager(object):
         if self.handler:
             self.handler.handle_message(message_type, params)
 
+    def create_sequence(self, full_sequence_path, data_type, decimal_places):
+        if full_sequence_path not in self.sequences_created:
+            self.controller.sequences.create(full_sequence_path, data_type, decimal_places=decimal_places)
+            self.sequences_created.add(full_sequence_path)
+
     # run this function as a greenlet, polling the given device
     def polling_loop(self, device):
         controller_path = self.controller.path_on_server()
@@ -152,12 +153,15 @@ class DeviceManager(object):
             seq_values = {}
             cloud_seq_values = {}
             for name, value in values.items():
-                seq_rel_path = device.server_path + '/' + name
-                seq_values[controller_path + '/' + seq_rel_path] = value
+                rel_seq_path = device.server_path + '/' + name
+                full_seq_path = controller_path + '/' + rel_seq_path
+                seq_values[full_seq_path] = value
+                self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device
                 if cloud_controller_path:
-                    cloud_seq_values[cloud_controller_path + '/' + seq_rel_path] = value
-                self.controller.sequences.update_value(seq_rel_path, value)
-                print('    %s/%s: %.2f' % (device.server_path, name, value))
+                    cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
+                self.controller.sequences.update_value(rel_seq_path, value)
+                if self.diagnostic_mode:
+                    print('    %s/%s: %.2f' % (device.server_path, name, value))
             if seq_values:
                 self.controller.sequences.update_multiple(seq_values)
                 if cloud_controller_path and 'BMU' in device.server_path:  # just send BMU values for now
@@ -187,6 +191,7 @@ class DeviceManager(object):
     def update_bluetooth_devices(self):
         interface = self.controller.config.bluetooth_interface
         scan_timeout = self.controller.config.bluetooth_scan_timeout
+        use_ubertooth = self.controller.config.get('use_ubertooth', False)
         while True:
             timestamp = time.time()
 
@@ -202,26 +207,38 @@ class DeviceManager(object):
                             'rssi': -random.randint(40, 70),
                         })
             else:
-                dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface)
+                try:
+                    dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface, ubertooth=use_ubertooth)
+                except Exception as e:
+                    print('error in find_blue_maestro_devices')
+                    print(e)
+                    dev_infos = {}
 
             # update our device objects and send values to server
             seq_values = {}
             found_count = 0
+            not_found_labels = []
             for dev_info in dev_infos:
                 label = dev_info['label']
+                found = False
                 for device in self.devices:
                     if hasattr(device, 'label') and device.label() == label:
-                        temperature = dev_info['temperature']
-                        humidity = dev_info['humidity']
                         device_path = self.controller.path_on_server() + '/' + device.server_path
-                        seq_values[device_path + '/temperature'] = temperature
-                        seq_values[device_path + '/humidity'] = humidity
+                        for metric in ['temperature', 'humidity', 'rssi']:
+                            metric_path = device_path + '/' + metric
+                            seq_values[metric_path] = dev_info[metric]
+                            self.create_sequence(metric_path, 'numeric', decimal_places=2)  # TODO: determine data type and decimal places from device
                         found_count += 1
+                        found = True
+                if not found:
+                    not_found_labels.append(label)
             self.controller.sequences.update_multiple(seq_values)
             print('blue maestro devices detected: %d, updated: %d' % (len(dev_infos), found_count))
+            if not_found_labels:
+                print('blue maestro devices not found in device list: %s' % (', '.join(not_found_labels)))
 
             # sleep until next cycle
-            gevent.sleep(15)
+            gevent.sleep(30)
 
     # find a device by server_path
     def find(self, server_path):
@@ -256,11 +273,15 @@ class DeviceManager(object):
             'values': json.dumps(send_values),
             'timestamp': datetime.datetime.utcnow().isoformat() + ' Z',
         }
-        (status, reason, data) = send_request(server_name, 'PUT', '/api/v1/resources', params, secure, 'text/plain', basic_auth)
-        if status == 200:
-            print('sent %d values to cloud server' % len(values))
-        else:
+        try:
+            (status, reason, data) = send_request(server_name, 'PUT', '/api/v1/resources', params, secure, 'text/plain', basic_auth)
+            if status == 200:
+                print('sent %d values to cloud server' % len(values))
+            else:
+                print('error sending values to cloud server; status: %d' % status)
+        except Exception as e:
             print('error sending values to cloud server')
+            print(e)
 
 
 if __name__ == '__main__':

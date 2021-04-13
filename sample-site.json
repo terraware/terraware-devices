@@ -1,0 +1,268 @@
+{
+  "devices": [
+    {
+      "id": 1004,
+      "siteModuleId": 105,
+      "name": "fridge-1-top",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "FC0C0208",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1011,
+      "siteModuleId": 105,
+      "name": "fridge-1-bottom",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "DB318FB2",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1002,
+      "siteModuleId": 105,
+      "name": "freezer-1",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "DA655F4F",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1006,
+      "siteModuleId": 105,
+      "name": "fridge-2-top",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "FOA564C1",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1007,
+      "siteModuleId": 105,
+      "name": "fridge-2-bottom",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "E25566A2",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1005,
+      "siteModuleId": 105,
+      "name": "freezer-2",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "E43FC2C9",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1012,
+      "siteModuleId": 105,
+      "name": "drying-cabinet-1",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "F2082F18",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1013,
+      "siteModuleId": 105,
+      "name": "drying-cabinet-3",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "CB40669D",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1014,
+      "siteModuleId": 105,
+      "name": "drying-cabinet-5",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "ECB65945",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1015,
+      "siteModuleId": 105,
+      "name": "drying-cabinet-6",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "D48B9DB2",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1016,
+      "siteModuleId": 105,
+      "name": "drying-cabinet-7",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "DA19AFE3",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1008,
+      "siteModuleId": 105,
+      "name": "room-entrance-1",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "FD09C74B",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1009,
+      "siteModuleId": 105,
+      "name": "room-back-1",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "E3AO4702",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1010,
+      "siteModuleId": 105,
+      "name": "room-drying-1",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "FB1AFBC6",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1017,
+      "siteModuleId": 105,
+      "name": "room-center-1",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "E19F5B18",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1018,
+      "siteModuleId": 105,
+      "name": "room-center-2",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "EAF7271D",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1019,
+      "siteModuleId": 105,
+      "name": "room-center-3",
+      "deviceType": "sensor",
+      "make": "Blue Maestro",
+      "model": "Tempo Disc",
+      "address": "E7B2C99B",
+      "pollingInterval": 30
+    },
+    {
+      "id": 1100,
+      "siteModuleId": 105,
+      "name": "server",
+      "deviceType": "server",
+      "make": "Raspberry Pi",
+      "model": "4B",
+      "address": "",
+      "pollingInterval": 60
+    },
+    {
+      "id": 1050,
+      "siteModuleId": 105,
+      "name": "router",
+      "deviceType": "router",
+      "make": "InHand Networks",
+      "model": "IR915L",
+      "address": "192.168.2.1",
+      "pollingInterval": 60
+    },
+    {
+      "id": 1060,
+      "siteModuleId": 105,
+      "name": "BMU",
+      "deviceType": "BMU",
+      "make": "Blue Ion",
+      "model": "BI2-BMU-LV",
+      "address": "192.168.2.50",
+      "port": 502,
+      "protocol": "modbus",
+      "settings": "",
+      "pollingInterval": 30
+    }
+  ],
+  "organizations": [
+    {
+      "id": 1,
+      "name": "Terraformation"
+    }
+  ],
+  "sites": [
+    {
+      "id": 11,
+      "organizationId": 1,
+      "name": "Future Forest",
+      "latitude": 0,
+      "longitude": 0
+    }
+  ],
+  "siteModules": [
+    {
+      "id": 105,
+      "siteId": 11,
+      "typeId": 2,
+      "name": "seedbank"
+    }
+  ],
+  "storageLocations": [
+    {
+      "id": 1000,
+      "siteModuleId": 105,
+      "name": "Refrigerator 1",
+      "conditionId": "Refrigerator"
+    },
+    {
+      "id": 1001,
+      "siteModuleId": 105,
+      "name": "Refrigerator 2",
+      "conditionId": "Refrigerator"
+    },
+    {
+      "id": 1002,
+      "siteModuleId": 105,
+      "name": "Freezer 1",
+      "conditionId": "Freezer"
+    },
+    {
+      "id": 1003,
+      "siteModuleId": 105,
+      "name": "Freezer 2",
+      "conditionId": "Freezer"
+    },
+    {
+      "id": 1004,
+      "siteModuleId": 105,
+      "name": "Refrigerator 3",
+      "conditionId": "Refrigerator"
+    },
+    {
+      "id": 1005,
+      "siteModuleId": 105,
+      "name": "Freezer 3",
+      "conditionId": "Freezer"
+    }
+  ]
+}

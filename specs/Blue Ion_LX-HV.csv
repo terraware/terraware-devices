@@ -1,0 +1,8 @@
+name,type,scale_factor,address,send_to_server,units,decimal_places
+relative_state_of_charge,uint16,0.1,0x4b,1,percent,1
+dc_voltage,uint32,0.001,0x41,1,V,3
+current,sint32,0.001,0x39,1,A,3
+state_of_health,uint16,0.1,0x50,1,percent,1
+BMU Status,uint32,1,0x2e,1,,0
+Cycle Count,uint16,1,0x51,1,,0
+Remaining Capacity,uint32,0.001,0x4c,1,Ah,3
