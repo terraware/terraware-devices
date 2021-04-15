@@ -13,7 +13,3 @@ pymodbus~=2.4
 
 # rhizo-server API is under development, so minor versions might have breaking changes
 rhizo-client~=0.1.5
-
-# nut for monitoring the UPS - seems relatively mature so for now just take anything
-# 2.7.4 was the latest as of adding this so I know that one works...
-nut>=2.7.4
