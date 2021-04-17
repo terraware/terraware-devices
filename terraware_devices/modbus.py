@@ -72,17 +72,19 @@ class ModbusDevice(TerrawareDevice):
             result = self._modbus_client.read_input_registers(address, count, unit=unit)
         if not hasattr(result, 'registers'):
             return None
-        if register_type == 'uint16':
+        if register_type == 'uint16' and len(result.registers) >= 1:
             return result.registers[0]
-        elif register_type == 'sint16':
+        elif register_type == 'sint16' and len(result.registers) >= 1:
             v = result.registers[0]
             if v > 0x7fff:  # rough sign manipulation; should check/fix
                 v = v - 0x10000
             return v
-        elif register_type == 'uint32':
+        elif register_type == 'uint32' and len(result.registers) >= 2:
             return result.registers[0] * 0x10000 + result.registers[1]
-        elif register_type == 'sint32':
+        elif register_type == 'sint32' and len(result.registers) >= 2:
             v = result.registers[0] * 0x10000 + result.registers[1]
             if v > 0x7fffffff:  # rough sign manipulation; should check/fix
                 v = v - 0x100000000
             return v
+        else:
+            return None
