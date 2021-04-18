@@ -127,13 +127,16 @@ class DeviceManager(object):
                 print('device not recognized; type: %s, make: %s, model: %s' % (dev_type, make, model))
         return count_added
 
+    # TODO: remove this after move away from site-specific code
     def set_handler(self, handler):
         self.handler = handler
 
+    # TODO: remove this after move away from site-specific code
     def handle_message(self, message_type, params):
         if self.handler:
             self.handler.handle_message(message_type, params)
 
+    # create a new time series on the server; ok to call on a time series that already exists
     def create_sequence(self, full_sequence_path, data_type, decimal_places):
         if full_sequence_path not in self.sequences_created:
             self.controller.sequences.create(full_sequence_path, data_type, decimal_places=decimal_places)
@@ -144,12 +147,16 @@ class DeviceManager(object):
         controller_path = self.controller.path_on_server()
         cloud_controller_path = self.controller.config.get('cloud_path')
         while True:
+
+            # do the polling
             try:
                 values = device.poll()
             except Exception as e:
                 print('error polling device %s' % device.server_path)
                 print(e)
                 values = {}
+
+            # send values to server
             seq_values = {}
             cloud_seq_values = {}
             for name, value in values.items():
@@ -166,6 +173,8 @@ class DeviceManager(object):
                 self.controller.sequences.update_multiple(seq_values)
                 if cloud_controller_path and 'BMU' in device.server_path:  # just send BMU values for now
                     self.send_to_cloud_server(cloud_seq_values)
+
+            # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
 
     # launch device polling greenlets and run handlers
@@ -188,6 +197,7 @@ class DeviceManager(object):
             gevent.sleep(10)
 
     # a greenlet for update bluetooth devices
+    # these are handles separately from other devices since we poll for a whole batch of devices in a single operation
     def update_bluetooth_devices(self):
         interface = self.controller.config.bluetooth_interface
         scan_timeout = self.controller.config.bluetooth_scan_timeout

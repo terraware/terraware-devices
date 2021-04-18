@@ -24,3 +24,10 @@ To generate random device data (rather than obtaining it from real hardware), se
 Copy `sample_local.yaml` to `local.yaml` (in the same directory) and make changes to it as needed, then run `main.py` from the same directory. 
 
 If you specify a `local_device_file_name` it should point to a JSON file in the same format as provided by the server.
+
+## Adding a new Device Type
+
+1.  Copy one of the existing device classes to a new file.
+2.  Set up a `poll()` method that returns readings from the device in a dictionary. (See other devices for examples.)
+3.  Add code for instantiating the class in the `create_devices` method in `device_manager.py`.
+4.  If desired, add the device to `sample-site.json`.
