@@ -106,7 +106,7 @@ def battery_charge_from_string(battery_charge_string):
 def poll_upsc():
     ups_status_result = subprocess.run(['upsc', 'terrabrainups@localhost', 'ups.status'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     battery_charge_result = subprocess.run(['upsc', 'terrabrainups@localhost', 'battery.charge'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return [status_from_string(ups_status_result.stdout.decode('utf-8')), battery_charge_from_string(battery_charge_result.stdout.decode('utf-8'))]
+    return {'ups_status': status_from_string(ups_status_result.stdout.decode('utf-8')), 'battery_charge': battery_charge_from_string(battery_charge_result.stdout.decode('utf-8'))}
 
 class NutUpsDevice(TerrawareDevice):
 
@@ -114,13 +114,11 @@ class NutUpsDevice(TerrawareDevice):
         init_nut_server(True)
 
         # For testing
-        ups_status_and_charge = poll_upsc()
-        print ('UPS status [%s] battery %d%%' % (ups_status_and_charge[0].name, ups_status_and_charge[1]))
+        print(poll_upsc())
 
     def reconnect(self):
         pass
 
     def poll(self):
-        poll_upsc()
-        return {}
+        return poll_upsc()
 
