@@ -44,6 +44,7 @@ RUN apt-get update \
         libusb-1.0.0 \
         ssh \
         udev \
+        nut \
     && apt-get clean \
     && rm -rf /var/cache/apt/lists
 
@@ -57,6 +58,12 @@ RUN ldconfig
 COPY balena-config.yaml config.yaml main.py ble_scan.py /app/
 COPY specs /app/specs
 COPY terraware_devices /app/terraware_devices
+
+COPY ups.conf nut.conf /etc/nut/
+
+# Uncomment these two lines to push a local site JSON file to the Pi for testing in local dev mode.
+#COPY sample_local.yaml /app/local.yaml
+#COPY sample-site.json /app/sample-site.json
 
 ENTRYPOINT ["/bin/bash", "/app/entry.sh"]
 CMD ["/usr/local/bin/python3", "main.py"]

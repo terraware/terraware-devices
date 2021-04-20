@@ -24,6 +24,7 @@ from .modbus import ModbusDevice
 from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
 from .blue_maestro import BlueMaestroDevice, find_blue_maestro_devices
+from .nut_ups import NutUpsDevice
 
 
 # manages a set of devices; each device handles a connection to physical hardware
@@ -103,6 +104,8 @@ class DeviceManager(object):
             if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
                 device = BlueMaestroDevice(address)
                 self.has_bluetooth_devices = True
+            elif dev_type == 'ups':
+                device = NutUpsDevice()
             elif dev_type == 'server' and make == 'Raspberry Pi':
                 device = RasPiDevice(self.local_sim)
             elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
