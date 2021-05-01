@@ -37,6 +37,8 @@ class ModbusDevice(TerrawareDevice):
         print('created modbus device (%s:%d, unit: %d)' % (host, port, self._unit))
 
     def reconnect(self):
+        self._modbus_client.close()
+        gevent.sleep(0.5)
         self._modbus_client.connect()
 
     def poll(self):
@@ -56,7 +58,10 @@ class ModbusDevice(TerrawareDevice):
 #                    seq_values[full_seq_name] = value
         if values:
             self.last_update_time = time.time()
-        print('received %d value(s) from %s' % (len(values), self.server_path))
+        print('received %d of %d value(s) from %s' % (len(values), len(self._seq_infos), self.server_path))
+        if len(values) != len(self._seq_infos):
+            print('received fewer values than expected; reconnecting')
+            self.reconnect()
         return values
 
     def read_register(self, address, register_type, unit):
