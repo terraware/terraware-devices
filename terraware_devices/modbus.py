@@ -62,6 +62,7 @@ class ModbusDevice(TerrawareDevice):
         if len(values) != len(self._seq_infos):
             print('received fewer values than expected; reconnecting')
             self.reconnect()
+            values = {}  # when this happens, we seem to get corrupt data; don't want to store that
         return values
 
     def read_register(self, address, register_type, unit):

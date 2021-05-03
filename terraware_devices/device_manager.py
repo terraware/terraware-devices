@@ -19,7 +19,7 @@ import requests
 from rhizo.controller import Controller
 from rhizo.resources import send_request  # temp for forwarding data to cloud server
 from .base import TerrawareDevice
-from .relay import RelayDevice
+from .control_by_web import CBWRelayDevice, CBWSensorHub, CBWTemperatureHumidityDevice
 from .modbus import ModbusDevice
 from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
@@ -35,6 +35,7 @@ class DeviceManager(object):
     def __init__(self):
         self.controller = Controller()
         self.devices = []
+        self.hubs = []
         self.has_bluetooth_devices = False
         self.start_time = None
         self.diagnostic_mode = self.controller.config.device_diagnostics
@@ -96,7 +97,9 @@ class DeviceManager(object):
             model = dev_info['model']
             server_path = dev_info['serverPath']
             address = dev_info['address']
+            port = dev_info.get('port')
             protocol = dev_info.get('protocol')
+            settings = dev_info.get('settings')
             polling_interval = dev_info['pollingInterval']
 
             # initialize a device based on the make/model/type
@@ -111,12 +114,15 @@ class DeviceManager(object):
             elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
                 device = InHandRouterDevice(address, self.controller.config.router_password, self.local_sim)
             elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
-                port = dev_info['port']
-                settings = dev_info['settings']
-                device = RelayDevice(address, port, settings, self.diagnostic_mode)
+                device = CBWRelayDevice(address, port, settings, self.local_sim)
+            elif dev_type == 'sensor' and make == 'ControlByWeb' and model == 'X-DTHS-WMX':
+                device = CBWTemperatureHumidityDevice(settings)
+                hub = self.find_hub(address=address)
+                if not hub:
+                    hub = CBWSensorHub(address, self.local_sim)
+                hub.add_device(device)
+                self.hubs.append(hub)
             elif protocol == 'modbus':
-                port = dev_info['port']
-                settings = dev_info['settings']
                 spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
                 device = ModbusDevice(address, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
 
@@ -258,6 +264,12 @@ class DeviceManager(object):
         for device in self.devices:
             if device.server_path == server_path:
                 return device
+
+    # find a hub by address
+    def find_hub(self, address):
+        for hub in self.hubs:
+            if hub.address == address:
+                return hub
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
     def watchdog_update(self):
