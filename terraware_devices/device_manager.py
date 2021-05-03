@@ -107,6 +107,7 @@ class DeviceManager(object):
             if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
                 device = BlueMaestroDevice(address)
                 self.has_bluetooth_devices = True
+                polling_interval = 0  # don't need to do polling for this device, just the hub
             elif dev_type == 'ups':
                 device = NutUpsDevice()
             elif dev_type == 'server' and make == 'Raspberry Pi':
@@ -122,6 +123,7 @@ class DeviceManager(object):
                     hub = CBWSensorHub(address, self.local_sim)
                 hub.add_device(device)
                 self.hubs.append(hub)
+                polling_interval = 0  # don't need to do polling for this device, just the hub
             elif protocol == 'modbus':
                 spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
                 device = ModbusDevice(address, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
@@ -188,8 +190,12 @@ class DeviceManager(object):
 
     # launch device polling greenlets and run handlers
     def run(self):
+        device_polling_greenlet_count = 0
         for device in self.devices:
-            device.greenlet = gevent.spawn(self.polling_loop, device)
+            if device.polling_interval:
+                device.greenlet = gevent.spawn(self.polling_loop, device)
+                device_polling_greenlet_count += 1
+        print('launched %d greenlet(s) for device polling' % device_polling_greenlet_count)
         if self.has_bluetooth_devices:
             gevent.spawn(self.update_bluetooth_devices)
         self.start_time = time.time()
