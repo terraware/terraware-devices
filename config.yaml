@@ -1,3 +1,4 @@
+enable_server: 1
 device_diagnostics: 0
 bluetooth_interface: 0
 bluetooth_scan_timeout: 10
