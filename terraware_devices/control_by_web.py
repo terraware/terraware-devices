@@ -4,9 +4,7 @@ import logging
 import requests
 from io import BytesIO
 from xml.etree import ElementTree
-
 import gevent
-
 from .base import TerrawareDevice
 
 
@@ -70,10 +68,12 @@ class CBWTemperatureHumidityDevice(TerrawareDevice):
 # e.g. ControlByWeb X-405
 class CBWSensorHub():
 
-    def __init__(self, address, local_sim):
+    def __init__(self, address, polling_interval, local_sim):
         self.address = address
-        self.devices = []
+        self.polling_interval = polling_interval
         self.local_sim = local_sim
+        self.make = 'ControlByWeb'
+        self.devices = []
 
     def add_device(self, device):
         self.devices.append(device)

@@ -20,6 +20,7 @@ from rhizo.controller import Controller
 from rhizo.resources import send_request  # temp for forwarding data to cloud server
 from .base import TerrawareDevice
 from .control_by_web import CBWRelayDevice, CBWSensorHub, CBWTemperatureHumidityDevice
+from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
 from .modbus import ModbusDevice
 from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
@@ -120,9 +121,17 @@ class DeviceManager(object):
                 device = CBWTemperatureHumidityDevice(settings)
                 hub = self.find_hub(address=address)
                 if not hub:
-                    hub = CBWSensorHub(address, self.local_sim)
+                    hub = CBWSensorHub(address, polling_interval, self.local_sim)
+                    self.hubs.append(hub)
                 hub.add_device(device)
-                self.hubs.append(hub)
+                polling_interval = 0  # don't need to do polling for this device, just the hub
+            elif dev_type == 'sensor' and make == 'OmniSense' and model == 'S-11':
+                device = OmniSenseTemperatureHumidityDevice(address)
+                hub = self.find_hub(make='OmniSense')
+                if not hub:
+                    hub = OmniSenseHub(polling_interval, self.local_sim)
+                    self.hubs.append(hub)
+                hub.add_device(device)
                 polling_interval = 0  # don't need to do polling for this device, just the hub
             elif protocol == 'modbus':
                 spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
@@ -154,8 +163,8 @@ class DeviceManager(object):
             self.sequences_created.add(full_sequence_path)
 
     # run this function as a greenlet, polling the given device
-    def polling_loop(self, device):
-        controller_path = self.controller.path_on_server()
+    def device_polling_loop(self, device):
+        controller_path = self.controller.path_on_server() if self.controller.config.enable_server else ''
         cloud_controller_path = self.controller.config.get('cloud_path')
         while True:
 
@@ -170,16 +179,17 @@ class DeviceManager(object):
             # send values to server
             seq_values = {}
             cloud_seq_values = {}
-            for name, value in values.items():
-                rel_seq_path = device.server_path + '/' + name
-                full_seq_path = controller_path + '/' + rel_seq_path
-                seq_values[full_seq_path] = value
-                self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device
-                if cloud_controller_path:
-                    cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
-                self.controller.sequences.update_value(rel_seq_path, value)
-                if self.diagnostic_mode:
-                    print('    %s/%s: %.2f' % (device.server_path, name, value))
+            if self.controller.config.enable_server:
+                for name, value in values.items():
+                    rel_seq_path = device.server_path + '/' + name
+                    full_seq_path = controller_path + '/' + rel_seq_path
+                    seq_values[full_seq_path] = value
+                    self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device?
+                    if cloud_controller_path:
+                        cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
+                    self.controller.sequences.update_value(rel_seq_path, value)
+                    if self.diagnostic_mode:
+                        print('    %s/%s: %.2f' % (device.server_path, name, value))
             if seq_values:
                 self.controller.sequences.update_multiple(seq_values)
                 if cloud_controller_path and 'BMU' in device.server_path:  # just send BMU values for now
@@ -188,14 +198,49 @@ class DeviceManager(object):
             # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
 
+    # run this function as a greenlet, polling the given hub
+    def hub_polling_loop(self, hub):
+        controller_path = self.controller.path_on_server() if self.controller.config.enable_server else ''
+        while True:
+
+            # do the polling
+            try:
+                values = hub.poll()
+            except Exception as e:
+                print('error polling hub')
+                print(e)
+                values = {}
+
+            # send values to server
+            seq_values = {}
+            if self.controller.config.enable_server:
+                for rel_seq_path, value in values.items():
+                    full_seq_path = controller_path + '/' + rel_seq_path
+                    seq_values[full_seq_path] = value
+                    self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device?
+                    self.controller.sequences.update_value(rel_seq_path, value)
+                    if self.diagnostic_mode:
+                        print('    %s: %.2f' % (rel_seq_path, value))
+            if seq_values:
+                self.controller.sequences.update_multiple(seq_values)
+
+            # wait until next round of polling
+            gevent.sleep(hub.polling_interval)  # TODO: need to subtract out poll duration
+
     # launch device polling greenlets and run handlers
     def run(self):
         device_polling_greenlet_count = 0
         for device in self.devices:
             if device.polling_interval:
-                device.greenlet = gevent.spawn(self.polling_loop, device)
+                device.greenlet = gevent.spawn(self.device_polling_loop, device)
                 device_polling_greenlet_count += 1
         print('launched %d greenlet(s) for device polling' % device_polling_greenlet_count)
+        hub_polling_greenlet_count = 0
+        for hub in self.hubs:
+            if hub.polling_interval:
+                hub.greenlet = gevent.spawn(self.hub_polling_loop, hub)
+                hub_polling_greenlet_count += 1
+        print('launched %d greenlet(s) for hub polling' % hub_polling_greenlet_count)
         if self.has_bluetooth_devices:
             gevent.spawn(self.update_bluetooth_devices)
         self.start_time = time.time()
@@ -217,6 +262,7 @@ class DeviceManager(object):
         interface = self.controller.config.bluetooth_interface
         scan_timeout = self.controller.config.bluetooth_scan_timeout
         use_ubertooth = self.controller.config.get('use_ubertooth', False)
+        controller_path = self.controller.path_on_server() if self.controller.config.enable_server else ''
         while True:
             timestamp = time.time()
 
@@ -248,7 +294,7 @@ class DeviceManager(object):
                 found = False
                 for device in self.devices:
                     if hasattr(device, 'label') and device.label() == label:
-                        device_path = self.controller.path_on_server() + '/' + device.server_path
+                        device_path = controller_path + '/' + device.server_path
                         for metric in ['temperature', 'humidity', 'rssi']:
                             metric_path = device_path + '/' + metric
                             seq_values[metric_path] = dev_info[metric]
@@ -271,10 +317,10 @@ class DeviceManager(object):
             if device.server_path == server_path:
                 return device
 
-    # find a hub by address
-    def find_hub(self, address):
+    # find a hub by address or make
+    def find_hub(self, address=None, make=None):
         for hub in self.hubs:
-            if hub.address == address:
+            if (address is None or hub.address == address) and (make is None or hub.make == make):
                 return hub
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server

@@ -89,12 +89,12 @@ def standard_scan(iface=0, timeout=2, verbose=False):
         manufacturer = d.getValueText(255)
         if manufacturer and manufacturer.startswith('3301'):
             label = d.getValueText(9)
-            if label and len(d.rawData) > 17:
+            if label and len(d.rawData) > 17:  # TODO: does the rawData include a checksum? if so, we should check it
                 rssi = d.rssi
                 vals = d.rawData
                 temperature = (vals[13] * 256 + vals[14]) * 0.1
                 humidity = (vals[15] * 256 + vals[16]) * 0.1
-                if temperature < 100 and humidity < 100:
+                if temperature < 100 and humidity < 100:  # TODO: any other checks we should use?
                     dev_info = {
                         'label': label,
                         'rssi': d.rssi,
