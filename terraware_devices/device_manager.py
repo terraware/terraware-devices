@@ -179,21 +179,21 @@ class DeviceManager(object):
             # send values to server
             seq_values = {}
             cloud_seq_values = {}
-            if self.controller.config.enable_server:
-                for name, value in values.items():
-                    rel_seq_path = device.server_path + '/' + name
-                    full_seq_path = controller_path + '/' + rel_seq_path
-                    seq_values[full_seq_path] = value
+            for name, value in values.items():
+                rel_seq_path = device.server_path + '/' + name
+                full_seq_path = controller_path + '/' + rel_seq_path
+                seq_values[full_seq_path] = value
+                if self.controller.config.enable_server:
                     self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device?
-                    if cloud_controller_path:
-                        cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
                     self.controller.sequences.update_value(rel_seq_path, value)
-                    if self.diagnostic_mode:
-                        print('    %s/%s: %.2f' % (device.server_path, name, value))
+                if cloud_controller_path:
+                    cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
+                if self.diagnostic_mode:
+                    print('    %s/%s: %.2f' % (device.server_path, name, value))
             if seq_values:
                 self.controller.sequences.update_multiple(seq_values)
-                if cloud_controller_path and 'BMU' in device.server_path:  # just send BMU values for now
-                    self.send_to_cloud_server(cloud_seq_values)
+            if cloud_seq_values and 'BMU' in device.server_path:  # just send BMU values for now
+                self.send_to_cloud_server(cloud_seq_values)
 
             # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
@@ -298,12 +298,14 @@ class DeviceManager(object):
                         for metric in ['temperature', 'humidity', 'rssi']:
                             metric_path = device_path + '/' + metric
                             seq_values[metric_path] = dev_info[metric]
-                            self.create_sequence(metric_path, 'numeric', decimal_places=2)  # TODO: determine data type and decimal places from device
+                            if self.controller.config.enable_server:
+                                self.create_sequence(metric_path, 'numeric', decimal_places=2)  # TODO: determine data type and decimal places from device
                         found_count += 1
                         found = True
                 if not found:
                     not_found_labels.append(label)
-            self.controller.sequences.update_multiple(seq_values)
+            if self.controller.config.enable_server:
+                self.controller.sequences.update_multiple(seq_values)
             print('blue maestro devices detected: %d, updated: %d' % (len(dev_infos), found_count))
             if not_found_labels:
                 print('blue maestro devices not found in device list: %s' % (', '.join(not_found_labels)))
