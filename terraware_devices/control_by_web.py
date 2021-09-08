@@ -10,13 +10,16 @@ from .base import TerrawareDevice
 
 class CBWRelayDevice(TerrawareDevice):
 
-    def __init__(self, host, port, settings, local_sim):
-        self._host = host
-        self._port = port
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        self._host = dev_info["host"]
+        self._port = dev_info["port"]
         self._sim_state = 0
-        self._local_sim = local_sim
         self.last_update_time = None
         print('created relay device (%s:%d)' % (host, port))
+
+    def get_timeseries_definitions(self):
+        return [[self.id, 'relay-1', 'numeric', 2]]
 
     def reconnect(self):
         pass
@@ -24,7 +27,7 @@ class CBWRelayDevice(TerrawareDevice):
     def poll(self):
         self.last_update_time = time.time()
         return {
-            'relay-1': self.read_state(),
+            (self.id, 'relay-1'): self.read_state(),
         }
 
     def read_state(self):
@@ -54,8 +57,9 @@ class CBWRelayDevice(TerrawareDevice):
 # e.g. ControlByWeb X-DTHS-WMX
 class CBWTemperatureHumidityDevice(TerrawareDevice):
 
-    def __init__(self, settings):
-        self.sensor_index = int(settings)
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.sensor_index = int(dev_info["settings"])
         print('created CBW temperature and humidity sensor')
 
     def reconnect(self):
@@ -66,17 +70,20 @@ class CBWTemperatureHumidityDevice(TerrawareDevice):
 
 
 # e.g. ControlByWeb X-405
-class CBWSensorHub():
+class CBWSensorHub(TerrawareHub):
 
-    def __init__(self, address, polling_interval, local_sim):
-        self.address = address
-        self.polling_interval = polling_interval
-        self.local_sim = local_sim
-        self.make = 'ControlByWeb'
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.address = dev_info["address"]
+        self.polling_interval = dev_info["pollingInternal"]
         self.devices = []
 
     def add_device(self, device):
         self.devices.append(device)
+
+    # This code appears to be unused, since poll never returns anything...
+    def get_timeseries_definitions(self):
+        return [[]]
 
     # similar to the device poll method, but each name in the dictionary should include the server path
     def poll(self):
@@ -89,6 +96,9 @@ class CBWSensorHub():
         tree = ElementTree.fromstring(xml)
 #        return int(tree.find('relay1state').text)
         return {}
+
+    def reconnect(self):
+        pass
 
     def sample_data(self):
         return '''<?xml version="1.0" encoding="utf-8" ?>

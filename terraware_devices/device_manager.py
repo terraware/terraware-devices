@@ -16,8 +16,6 @@ from typing import List
 
 # other imports
 import requests
-from rhizo.controller import Controller
-from rhizo.resources import send_request  # temp for forwarding data to cloud server
 from .base import TerrawareDevice
 from .control_by_web import CBWRelayDevice, CBWSensorHub, CBWTemperatureHumidityDevice
 from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
@@ -34,198 +32,92 @@ class DeviceManager(object):
     devices: List[TerrawareDevice]
 
     def __init__(self):
-        self.controller = Controller()
+        # Logic here is:
+        # This device manager is running on a device that handles sensing for one or more facilities.
+        # For example, this could be running on a raspberry pi that is hooked up to all the sensors for
+        # the seed bank it's inside, but also all the sensors for the nearby nursery because it's close enough
+        # and there was no reason to get a second computer for the nursery.
+        # 
+        # We use device envvars to point us both to the place the config data should come from, and also
+        # the list of facilities this device is responsible for.
+        #
+        # One final detail is that we do then inform the server about all these timeseries, not because it is an
+        # authoritative source of information about them, but so that on the other end, when analyzing or visualizing
+        # the data, we have a way to query, for example, "Give me all temperature readings from facility #84".
         self.devices = []
-        self.hubs = []
         self.has_bluetooth_devices = False
         self.start_time = None
-        self.diagnostic_mode = self.controller.config.device_diagnostics
-        self.local_sim = self.controller.config.get('local_sim', False)
-        self.handler = None
-        local_device_file_name = self.controller.config.get('local_device_file_name')
-        if local_device_file_name:
-            self.load_from_file(local_device_file_name)
-        else:
-            self.load_from_server()
-        self.controller.messages.add_handler(self)
-        self.sequences_created = set()
+        self.diagnostic_mode = os.environ['DEVICE_MANAGER_DIAGNOSTIC_MODE']
 
-    # initialize devices using a JSON file
-    def load_from_file(self, device_list_file_name):
-        if device_list_file_name.endswith('json'):
-            with open(device_list_file_name) as json_file:
-                site_info = json.loads(json_file.read())
-                site_module_names = {}  # name by ID
-                for site_module in site_info.get('siteModules', []):
-                    site_module_names[site_module['id']] = site_module['name']
-                device_infos = site_info['devices']
-                for device_info in device_infos:  # support files in the site format (which is a bit different from the device API response format)
-                    if 'deviceType' in device_info:
-                        device_info['type'] = device_info['deviceType']
-                        del device_info['deviceType']
-                    if not 'serverPath' in device_info and 'siteModuleId' in device_info:
-                        device_info['serverPath'] = site_module_names[device_info['siteModuleId']] + '/' + device_info['name']  # assumes site module found
-                count_added = self.create_devices(device_infos)
-        print('loaded %d devices from %s' % (count_added, device_list_file_name))
+        self.server_path = os.environ['DEVICE_MANAGER_SERVER']
 
-    # initialize devices using JSON data from server; retry until success
-    def load_from_server(self):
-        server_name = self.controller.config.server_name
-        secret_key = self.controller.config.secret_key
-        url = 'http://' + server_name + '/api/v1/device/all/config'
-        device_infos = None
+        self.offline_refresh_token = os.environ['DEVICE_MANAGER_OFFLINE_REFRESH_TOKEN']
+        self.access_token_request_url = os.environ['DEVICE_MANAGER_ACCESS_TOKEN_REQUEST_URL']
+        self.access_token = self.get_access_token_from_server()
 
-        while device_infos is None:
-            try:
-                r = requests.get(url, auth=('', secret_key))
-                r.raise_for_status()
-                device_infos = r.json()['devices']
-            except Exception as ex:
-                print('error requesting devices from server %s: %s' % (server_name, ex))
-                gevent.sleep(10)
+        self.local_sim = False
 
-        count_added = self.create_devices(device_infos)
-        print('loaded %d devices from %s' % (count_added, server_name))
+        self.facilities = os.environ['DEVICE_MANAGER_FACILITIES']
+        self.load_config_from_server(self.facilities)
+
+        self.timeseries_values_to_send = []
 
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
         count_added = 0
         spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/../specs'
         print('device list has information for %d device(s)' % len(device_infos))
+
+        # Create the devices and hubs and save in a flat list
         for dev_info in device_infos:
-            dev_type = dev_info['type']
-            make = dev_info['make']
-            model = dev_info['model']
-            server_path = dev_info['serverPath']
-            address = dev_info['address']
-            port = dev_info.get('port')
-            protocol = dev_info.get('protocol')
-            settings = dev_info.get('settings')
-            polling_interval = dev_info['pollingInterval']
-
-            # initialize a device based on the make/model/type
             device = None
-            if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
-                device = BlueMaestroDevice(address)
-                self.has_bluetooth_devices = True
-                polling_interval = 0  # don't need to do polling for this device, just the hub
-            elif dev_type == 'ups':
-                device = NutUpsDevice()
-            elif dev_type == 'server' and make == 'Raspberry Pi':
-                device = RasPiDevice(self.local_sim)
-            elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
-                device = InHandRouterDevice(address, self.controller.config.router_password, self.local_sim)
-            elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
-                device = CBWRelayDevice(address, port, settings, self.local_sim)
-            elif dev_type == 'sensor' and make == 'ControlByWeb' and model == 'X-DTHS-WMX':
-                device = CBWTemperatureHumidityDevice(settings)
-                hub = self.find_hub(address=address)
-                if not hub:
-                    hub = CBWSensorHub(address, polling_interval, self.local_sim)
-                    self.hubs.append(hub)
-                hub.add_device(device)
-                polling_interval = 0  # don't need to do polling for this device, just the hub
-            elif dev_type == 'sensor' and make == 'OmniSense' and model == 'S-11':
-                device = OmniSenseTemperatureHumidityDevice(address)
-                hub = self.find_hub(make='OmniSense')
-                if not hub:
-                    hub = OmniSenseHub(polling_interval, self.local_sim)
-                    self.hubs.append(hub)
-                hub.add_device(device)
-                polling_interval = 0  # don't need to do polling for this device, just the hub
-            elif protocol == 'modbus':
-                spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
-                device = ModbusDevice(address, port, settings, self.diagnostic_mode, self.local_sim, spec_file_name)
-
-            # if a device was created, add it to our collection
-            if device:
-                device.set_server_path(server_path)
-                device.set_polling_interval(polling_interval)
+            device_class = self.get_device_class_to_instantiate(dev_info)
+            if device_class:
+                device = device_class(dev_info, spec_path, self.local_sim, self.diagnostic_mode, spec_path)
                 self.devices.append(device)
                 count_added += 1
             else:
                 print('device not recognized; type: %s, make: %s, model: %s' % (dev_type, make, model))
+
+        # For devices that are children hooked to hubs, find the hubs and link them up.
+        for device in self.devices:
+            if device.hub_id:
+                hub_device = next(x for x in self.devices if x.id == hub_id, None)
+                if hub_device:
+                    if hasattr(hub_device, 'add_device'):
+                        hub_device.add_device(device)
+                    else:
+                        print('Error: Device {} has hub id {}, but device with that id is not a hub! (does not inherit from TerrawareHub).'.format(device.name, device.hub_id))
+                else:
+                    print('Error: Device {} has hub id {}, but no device with that id exists! Did you forget to add the hub to the configuration?'.format(device.name, device.hub_id))
+        
+        # We wait until here to query timeseries rather than asking right after creating the device, because in some cases 
+        # the hub object may want to enumerate the timeseries, so we only ask after all the child devices are linked to their hubs,
+        # just so the devices can all assume they're fully constructed by the time this gets called.
+        timeseries_definitions = []
+        timeseries_definitions.extend(newdevice.get_timeseries_definitions()) for newdevice in self.devices
+        self.send_timeseries_definitions_to_server(timeseries_definitions)
+
         return count_added
-
-    # TODO: remove this after move away from site-specific code
-    def set_handler(self, handler):
-        self.handler = handler
-
-    # TODO: remove this after move away from site-specific code
-    def handle_message(self, message_type, params):
-        if self.handler:
-            self.handler.handle_message(message_type, params)
-
-    # create a new time series on the server; ok to call on a time series that already exists
-    def create_sequence(self, full_sequence_path, data_type, decimal_places):
-        if full_sequence_path not in self.sequences_created:
-            self.controller.sequences.create(full_sequence_path, data_type, decimal_places=decimal_places)
-            self.sequences_created.add(full_sequence_path)
 
     # run this function as a greenlet, polling the given device
     def device_polling_loop(self, device):
-        controller_path = self.controller.path_on_server() if self.controller.config.enable_server else ''
-        cloud_controller_path = self.controller.config.get('cloud_path')
         while True:
-
             # do the polling
             try:
                 values = device.poll()
             except Exception as e:
-                print('error polling device %s' % device.server_path)
+                print('error polling device {} (id {})'.format(device.name, device.id))
                 print(e)
                 values = {}
 
-            # send values to server
-            seq_values = {}
-            cloud_seq_values = {}
-            for name, value in values.items():
-                rel_seq_path = device.server_path + '/' + name
-                full_seq_path = controller_path + '/' + rel_seq_path
-                seq_values[full_seq_path] = value
-                if self.controller.config.enable_server:
-                    self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device?
-                    self.controller.sequences.update_value(rel_seq_path, value)
-                if cloud_controller_path:
-                    cloud_seq_values[cloud_controller_path + '/' + rel_seq_path] = value
-                if self.diagnostic_mode:
-                    print('    %s/%s: %.2f' % (device.server_path, name, value))
-            if seq_values:
-                self.controller.sequences.update_multiple(seq_values)
-            if cloud_seq_values and 'BMU' in device.server_path:  # just send BMU values for now
-                self.send_to_cloud_server(cloud_seq_values)
+            self.record_timeseries_values_and_maybe_push_to_server(values)
+
+            if self.diagnostic_mode:
+                print('    %s: %.2f' % (id_name_pair, value)) for id_name_pair, value in values.items()
 
             # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
-
-    # run this function as a greenlet, polling the given hub
-    def hub_polling_loop(self, hub):
-        controller_path = self.controller.path_on_server() if self.controller.config.enable_server else ''
-        while True:
-
-            # do the polling
-            try:
-                values = hub.poll()
-            except Exception as e:
-                print('error polling hub')
-                print(e)
-                values = {}
-
-            # send values to server
-            seq_values = {}
-            if self.controller.config.enable_server:
-                for rel_seq_path, value in values.items():
-                    full_seq_path = controller_path + '/' + rel_seq_path
-                    seq_values[full_seq_path] = value
-                    self.create_sequence(full_seq_path, 'numeric', 2)  # TODO: determine data type and decimal places from device?
-                    self.controller.sequences.update_value(rel_seq_path, value)
-                    if self.diagnostic_mode:
-                        print('    %s: %.2f' % (rel_seq_path, value))
-            if seq_values:
-                self.controller.sequences.update_multiple(seq_values)
-
-            # wait until next round of polling
-            gevent.sleep(hub.polling_interval)  # TODO: need to subtract out poll duration
 
     # launch device polling greenlets and run handlers
     def run(self):
@@ -234,13 +126,7 @@ class DeviceManager(object):
             if device.polling_interval:
                 device.greenlet = gevent.spawn(self.device_polling_loop, device)
                 device_polling_greenlet_count += 1
-        print('launched %d greenlet(s) for device polling' % device_polling_greenlet_count)
-        hub_polling_greenlet_count = 0
-        for hub in self.hubs:
-            if hub.polling_interval:
-                hub.greenlet = gevent.spawn(self.hub_polling_loop, hub)
-                hub_polling_greenlet_count += 1
-        print('launched %d greenlet(s) for hub polling' % hub_polling_greenlet_count)
+        print('launched %d greenlet(s) for device & hub polling' % device_polling_greenlet_count)
         if self.has_bluetooth_devices:
             gevent.spawn(self.update_bluetooth_devices)
         self.start_time = time.time()
@@ -313,27 +199,14 @@ class DeviceManager(object):
             # sleep until next cycle
             gevent.sleep(30)
 
-    # find a device by server_path
-    def find(self, server_path):
-        for device in self.devices:
-            if device.server_path == server_path:
-                return device
-
-    # find a hub by address or make
-    def find_hub(self, address=None, make=None):
-        for hub in self.hubs:
-            if (address is None or hub.address == address) and (make is None or hub.make == make):
-                return hub
-
     # check on devices; restart them as needed; if all is good, send watchdog message to server
     def watchdog_update(self):
-
         # if it has been a while since startup, start checking device updates
         if time.time() - self.start_time > 30:
             devices_ok = True
             for device in self.devices:
                 if device.last_update_time is None or time.time() - device.last_update_time > 10 * 60:
-                    logging.info('no recent update for device %s; reconnecting', device.server_path)
+                    logging.info('no recent update for device {} (id {}); reconnecting'.format(device.name, device.id))
                     device.reconnect()
                     devices_ok = False
 
@@ -341,26 +214,80 @@ class DeviceManager(object):
             if devices_ok:
                 self.controller.send_message('watchdog', {})
 
-    # temporary code for forwarding data to cloud server
-    def send_to_cloud_server(self, values):
-        server_name = self.controller.config.cloud_server
-        secure = not server_name.startswith('127.0.0.1')
-        secret_key = self.controller.config.cloud_secret_key
-        basic_auth = base64.b64encode(('dev-mgr:' + secret_key).encode('utf-8')).decode()  # send secret key as password
-        send_values = {k: str(v) for k, v in values.items()}  # make sure values are strings
-        params = {
-            'values': json.dumps(send_values),
-            'timestamp': datetime.datetime.utcnow().isoformat() + ' Z',
-        }
-        try:
-            (status, reason, data) = send_request(server_name, 'PUT', '/api/v1/resources', params, secure, 'text/plain', basic_auth)
-            if status == 200:
-                print('sent %d values to cloud server' % len(values))
-            else:
-                print('error sending values to cloud server; status: %d' % status)
-        except Exception as e:
-            print('error sending values to cloud server')
-            print(e)
+    def load_config_from_server(self, facilities):
+        device_infos = self.query_config_from_server(self.facilities)
+
+        count_added = self.create_devices(device_infos)
+        print('loaded %d devices from %s' % (count_added, server_name))
+
+    # APIs for communicating with the terraware-server.
+
+    # We use expiring access tokens for server access, and need to periodically request a new one; this is how you do that.
+    # Called immediately on startup and then anytime a query fails
+    def get_access_token_from_server(self):
+        request_url = self.access_token_request_url
+        offline_refresh_token = self.offline_refresh_token
+        # assemble a request with those two and then return success or failure blah blah
+
+    def query_config_from_server(self, facilities):
+        server_name = self.server_path
+        secret_key = self.server_auth_key
+        url = 'http://' + server_name + '/api/v1/device/all/config'
+        device_infos = None
+
+        while device_infos is None:
+            try:
+                r = requests.get(url, auth=('', secret_key))
+                r.raise_for_status()
+                device_infos = r.json()['devices']
+            except Exception as ex:
+                print('error requesting devices from server %s: %s' % (server_name, ex))
+                gevent.sleep(10)
+
+        return device_infos
+
+    def send_timeseries_definitions_to_server(self, timeseries_definitions):
+        pass
+
+    def record_timeseries_values_and_maybe_push_to_server(self, values):
+        # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
+        pass
+
+    # This is sort of a glorified dictionary lookup, and it could be extracted out of this file and
+    # we could do something like walk the directory and ask each py file to add class defs to some
+    # dictionary so there's not even a direct awareness of the various sensor classes here in this
+    # file. But this seems like the right compromise of legibility and decoupling at the moment.
+    def get_device_class_to_instantiate(self, dev_info):
+        dev_type = dev_info['type']
+        make = dev_info['make']
+        model = dev_info['model']
+        server_path = dev_info['serverPath']
+        address = dev_info['address']
+        polling_interval = dev_info['pollingInterval']
+
+        port = dev_info.get('port')
+        protocol = dev_info.get('protocol')
+
+        if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
+            return BlueMaestroDevice
+        elif dev_type == 'ups':
+            return NutUpsDevice
+        elif dev_type == 'server' and make == 'Raspberry Pi':
+            return RasPiDevice
+        elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
+            return InHandRouterDevice
+        elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
+            return CBWRelayDevice
+        elif dev_type == 'sensor' and make == 'ControlByWeb' and model == 'X-DTHS-WMX':
+            return CBWTemperatureHumidityDevice
+        elif dev_type == "hub" and make == "ControlByWeb":
+            return CBWSensorHub
+        elif dev_type == 'sensor' and make == 'OmniSense' and model == 'S-11':
+            return OmniSenseTemperatureHumidityDevice
+        elif dev_type == "hub" and make == "OmniSense":
+            return OmniSenseHub
+        elif protocol == 'modbus':
+            return ModbusDevice
 
 
 if __name__ == '__main__':

@@ -107,9 +107,13 @@ def standard_scan(iface=0, timeout=2, verbose=False):
 
 class BlueMaestroDevice(TerrawareDevice):
 
-    def __init__(self, label):
-        self._label = label  # ID from the sticker on the blue maestro device
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        self._label = dev_info["address"] # ID from the sticker on the blue maestro device
         print('created BlueMaestroDevice with label %s' % label)
+
+    def get_timeseries_definitions(self):
+        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'humidity', 'rssi']]
 
     def label(self):
         return self._label

@@ -103,22 +103,27 @@ def battery_charge_from_string(battery_charge_string):
 
 # Returns a list where the first value is the status enum (UpsStatus) and the second is the integer battery charge value (0-100)
 # If the enum value is UpsStatus.unknown the battery charge value will be -1
-def poll_upsc():
+def poll_upsc(device_id):
     ups_status_result = subprocess.run(['upsc', 'terrabrainups@localhost', 'ups.status'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     battery_charge_result = subprocess.run(['upsc', 'terrabrainups@localhost', 'battery.charge'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return {'ups_status': status_from_string(ups_status_result.stdout.decode('utf-8')), 'battery_charge': battery_charge_from_string(battery_charge_result.stdout.decode('utf-8'))}
+    return {(device_id, 'ups_status'    ): status_from_string(ups_status_result.stdout.decode('utf-8')), 
+            (device_id, 'battery_charge'): battery_charge_from_string(battery_charge_result.stdout.decode('utf-8'))}
 
 class NutUpsDevice(TerrawareDevice):
 
-    def __init__(self):
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
         init_nut_server(True)
 
         # For testing
         print(poll_upsc())
 
+    def get_timeseries_definitions(self):
+        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['ups_status', 'battery_charge']]
+
     def reconnect(self):
         pass
 
     def poll(self):
-        return poll_upsc()
+        return poll_upsc(self.id)
 

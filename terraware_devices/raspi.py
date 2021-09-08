@@ -9,10 +9,10 @@ from .base import TerrawareDevice
 # performs monitoring a raspberry pi
 class RasPiDevice(TerrawareDevice):
 
-    def __init__(self, local_sim):
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
         self._last_disk_counters = {}
         self._last_poll_time = None
-        self._local_sim = local_sim
         self._polled = False
         self._start_time = time.time()
         print('created RasPiDevice')
@@ -21,7 +21,7 @@ class RasPiDevice(TerrawareDevice):
         pass
 
     def poll(self):
-        if self._local_sim:
+        if self.local_sim:
             gigabyte = 1024*1024*1024
 
             # CPU percentages should add up to 100 even with fake data since there
@@ -32,41 +32,41 @@ class RasPiDevice(TerrawareDevice):
             cpu_idle = 100 - cpu_user - cpu_system - cpu_iowait
 
             values = {
-                'cpu_idle': cpu_idle,
-                'cpu_iowait': cpu_iowait,
-                'cpu_system': cpu_system,
-                'cpu_user': cpu_user,
-                'memory_available': random.uniform(1 * gigabyte, 4 * gigabyte),
-                'memory_total': 8 * gigabyte,
-                'temperature': random.uniform(40, 60),
-                'uptime': time.time() - self._start_time,
+                (self.id, 'cpu_idle'        ): cpu_idle,
+                (self.id, 'cpu_iowait'      ): cpu_iowait,
+                (self.id, 'cpu_system'      ): cpu_system,
+                (self.id, 'cpu_user'        ): cpu_user,
+                (self.id, 'memory_available'): random.uniform(1 * gigabyte, 4 * gigabyte),
+                (self.id, 'memory_total'    ): 8 * gigabyte,
+                (self.id, 'temperature'     ): random.uniform(40, 60),
+                (self.id, 'uptime'          ): time.time() - self._start_time,
             }
         else:
             memory_stats = psutil.virtual_memory()
 
             values = {
-                'memory_available': memory_stats.available,
-                'memory_total': memory_stats.total,
-                'uptime': time.time() - psutil.boot_time(),
+                (self.id, 'memory_available'): memory_stats.available,
+                (self.id, 'memory_total'    ): memory_stats.total,
+                (self.id, 'uptime'          ): time.time() - psutil.boot_time(),
             }
 
             # sensors_temperatures doesn't exist on all platforms
             if hasattr(psutil, 'sensors_temperatures'):
-                values['temperature'] = psutil.sensors_temperatures()['cpu_thermal'][0].current
+                values[(self.id, 'temperature')] = psutil.sensors_temperatures()['cpu_thermal'][0].current
 
             # CPU percentages are computed using elapsed time since the previous
             # call, so you're supposed to throw the first sample away.
             cpu_times = psutil.cpu_times_percent()
             if self._polled:
                 values.update({
-                    'cpu_user': cpu_times.user,
-                    'cpu_system': cpu_times.system,
-                    'cpu_idle': cpu_times.idle,
+                    (self.id, 'cpu_user'  ): cpu_times.user,
+                    (self.id, 'cpu_system'): cpu_times.system,
+                    (self.id, 'cpu_idle'  ): cpu_times.idle,
                 })
 
                 # iowait doesn't exist on all platforms
                 if hasattr(cpu_times, 'iowait'):
-                    values['cpu_iowait'] = cpu_times.iowait
+                    values[(self.id, 'cpu_iowait')] = cpu_times.iowait
 
         values.update(self._disk_io_metrics('md0', 'array'))
         values.update(self._disk_io_metrics('mmcblk0', 'sdcard'))
@@ -118,7 +118,7 @@ class RasPiDevice(TerrawareDevice):
         metric_name = f'disk_{name}_{counter_name}'
 
         if self._local_sim:
-            return { metric_name: random.uniform(1, 1000) }
+            return { (self.id, metric_name): random.uniform(1, 1000) }
 
         last_counters = self._last_disk_counters.get(device)
         if not last_counters:
@@ -141,4 +141,4 @@ class RasPiDevice(TerrawareDevice):
 
         value_per_second = (new_value - last_value) / seconds_since_last
 
-        return { metric_name: value_per_second }
+        return { (self.id, metric_name): value_per_second }

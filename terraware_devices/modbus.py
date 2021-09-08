@@ -13,20 +13,24 @@ from .base import TerrawareDevice
 
 class ModbusDevice(TerrawareDevice):
 
-    def __init__(self, host, port, settings, diagnostic_mode, local_sim, spec_file_name):
-        settings_items = settings.split(';')
-        self._host = host
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        settings_items = dev_info["settings"].split(';')
+        self._host = dev_info["host"]
         self._unit = 1  # aka modbus slave number
         for setting in settings_items:
             if setting.startswith('unit='):
                 self._unit = int(setting.split('=')[1])
         self.last_update_time = None
-        self._diagnostic_mode = diagnostic_mode
         framer = ModbusRtuFramer if ('rtu-over-tcp' in settings_items) else ModbusSocketFramer
+
+        host = dev_info["host"]
+        port = dev_info["port"]
         self._modbus_client = ModbusTcpClient(host, port=port, framer=framer)
         self._read_holding = ('holding' in settings_items)
         self._seq_infos = []
-        self._local_sim = local_sim
+
+        spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
 
         # load seqeuence info
         with open(spec_file_name) as csvfile:
@@ -35,6 +39,9 @@ class ModbusDevice(TerrawareDevice):
                 self._seq_infos.append(line)
 
         print('created modbus device (%s:%d, unit: %d)' % (host, port, self._unit))
+
+    def get_timeseries_definitions(self):
+        return [[self.id, sequence.name, 'numeric', 2] for sequence in self._seq_infos]
 
     def reconnect(self):
         self._modbus_client.close()
@@ -50,7 +57,7 @@ class ModbusDevice(TerrawareDevice):
             value = self.read_register(address, seq_info['type'], self._unit)
             if value is not None:
                 value *= float(seq_info['scale_factor'])
-                values[seq_info['name']] = value
+                values[(self.id, seq_info['name'])] = value
                 if self._diagnostic_mode:
                     print('    %s/%s: %.2f' % (self.server_path, seq_info['name'], value))
 #                if int(seq_info['send_to_server']):

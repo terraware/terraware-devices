@@ -17,23 +17,19 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
         hub_instance.process_data(data)
 
 
-class OmniSenseHub():
+class OmniSenseHub(TerrawareHub):
 
-    def __init__(self, polling_interval, local_sim):
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
         global hub_instance
         hub_instance = self
         self.devices = []
-        self.polling_interval = polling_interval
-        self.local_sim = local_sim
+        self.polling_interval = dev_info["pollingInterval"]
         self.recent_sensor_data = {}
         self.address = None
-        self.make = 'OmniSense'
         gevent.spawn(self.run_syslog_server)
         if self.local_sim:
             gevent.spawn(self.sim)
-
-    def add_device(self, device):
-        self.devices.append(device)
 
     def run_syslog_server(self):
         ip_address = current_ip_address()
@@ -50,8 +46,11 @@ class OmniSenseHub():
                 sensor_id, temperature, humidity = parse_message(parts[-1])
                 device = self.find_device(sensor_id)
                 if device:
-                    self.recent_sensor_data[device.server_path + '/temperature'] = temperature
-                    self.recent_sensor_data[device.server_path + '/humidity'] = humidity
+                    # Note that "sensor_id" is actually the hardware identifier of the physical sensor from omnisense,
+                    # not the unique device ID our server assigned to the device, so we need device.id for the timeseries
+                    # key, not sensor_id. We should clean up all this terminology at some point.
+                    self.recent_sensor_data[(device.id, 'temperature')] = temperature
+                    self.recent_sensor_data[(device.id, 'humidity'   )] = humidity
                 else:
                     print('data from unknown omnisense device: %s' % sensor_id)
 
@@ -59,6 +58,9 @@ class OmniSenseHub():
         result = self.recent_sensor_data
         self.recent_sensor_data = {}
         return result
+
+    def reconnect(self):
+        pass
 
     def sim(self):
         prefix = '<13>May 16 03:39:38 OmniSense sensorReading: '
@@ -80,9 +82,16 @@ class OmniSenseHub():
 
 class OmniSenseTemperatureHumidityDevice(TerrawareDevice):
 
-    def __init__(self, address):
-        self.sensor_id = address
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.sensor_id = dev_info["address"]
         print('created OmniSenseTemperatureHumidityDevice with id %s' % self.sensor_id)
+
+    # These actually get returned by the hub object - our poll() does nothing - but that's fine - we can supply
+    # the definitions. (It would also be fine if the hub object replied with a list of all of these in its; it's just
+    # easier to implement here.)
+    def get_timeseries_definitions(self):
+        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'humidity']]
 
     # not used; polling is done in hub class
     def poll(self):

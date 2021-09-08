@@ -19,7 +19,7 @@ Cell ID             : 1BD902
 """
 
 
-def poll_router(host, username, password):
+def poll_router(device_id, host, username, password):
     proc = pexpect.spawn('ssh %s -l %s' % (host, username))
     try:
         proc.expect('(yes/no)', timeout=2)  # for "The authenticity of host ... can't be established ... Are you sure you want to continue connecting (yes/no)?"
@@ -39,28 +39,40 @@ def poll_router(host, username, password):
     proc.sendline('exit')
     proc.sendline('Y')
     return {
-        'signal_stength': signal_strength
+        (device_id, 'signal_stength'): signal_strength
     }
 
 
 # performs monitoring of the InHand Networks IR915L 4G router
 class InHandRouterDevice(TerrawareDevice):
 
-    def __init__(self, address, password, local_sim):
-        self._address = address
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        self._address = dev_info["address"]
         self._username = "adm"
-        self._password = password
-        self._local_sim = local_sim
+
+        settings = dev_info["settings"].split(";")
+        password_setting = next(x for x in settings if x.startswith("password="), None)
+
+        self._password = ""
+        if (password_setting)
+            self._password = password_setting.split("=")[1]
+        else
+            print('Error: InHandRouterDevice received no "password=xxxxxx" in its device configuration settings!')
+
         print('created InHandRouterDevice with address %s' % address)
+
+    def get_timeseries_definitions(self):
+        return [[self.id, 'signal_strength', 'numeric', 2]]
 
     def reconnect(self):
         pass
 
     def poll(self):
-        if self._local_sim:
+        if self.local_sim:
             values = {
-                'signal_stength': 18
+                (self.id, 'signal_stength'): 18
             }
         else:
-            values = poll_router(self._address, self._username, self._password)
+            values = poll_router(self.id, self._address, self._username, self._password)
         return values
