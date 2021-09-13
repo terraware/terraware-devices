@@ -105,6 +105,10 @@ def standard_scan(iface=0, timeout=2, verbose=False):
     return dev_infos
 
 
+########################################################################################################
+#### NOTE BSHARP: BROKEN - THIS WAS UNUSED when I took over the device manager. I'm leaving the code here
+#### but it is not included in device_manager, you can't create one of these, and the code has certainly rotten. 
+########################################################################################################
 class BlueMaestroDevice(TerrawareDevice):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):

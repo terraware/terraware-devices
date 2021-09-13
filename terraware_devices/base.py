@@ -37,7 +37,6 @@ class TerrawareDevice(ABC):
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         self._id = dev_info["id"]
         self._name = dev_info["name"]
-        self._server_path = dev_info["serverPath"]
         self._local_sim = local_sim
         self._diagnostic_mode = diagnostic_mode
         self._hub_id = dev_info.get("hubId")

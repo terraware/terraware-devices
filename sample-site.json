@@ -1,278 +1,75 @@
 {
   "devices": [
     {
-      "id": 1004,
-      "siteModuleId": 105,
-      "name": "fridge-1-top",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "FC0C0208",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1011,
-      "siteModuleId": 105,
-      "name": "fridge-1-bottom",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "DB318FB2",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1002,
-      "siteModuleId": 105,
-      "name": "freezer-1",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "DA655F4F",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1006,
-      "siteModuleId": 105,
-      "name": "fridge-2-top",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "FOA564C1",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1007,
-      "siteModuleId": 105,
-      "name": "fridge-2-bottom",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "E25566A2",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1005,
-      "siteModuleId": 105,
-      "name": "freezer-2",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "E43FC2C9",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1012,
-      "siteModuleId": 105,
-      "name": "drying-cabinet-1",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "F2082F18",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1013,
-      "siteModuleId": 105,
-      "name": "drying-cabinet-3",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "CB40669D",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1014,
-      "siteModuleId": 105,
-      "name": "drying-cabinet-5",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "ECB65945",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1015,
-      "siteModuleId": 105,
-      "name": "drying-cabinet-6",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "D48B9DB2",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1016,
-      "siteModuleId": 105,
-      "name": "drying-cabinet-7",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "DA19AFE3",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1008,
-      "siteModuleId": 105,
-      "name": "room-entrance-1",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "FD09C74B",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1009,
-      "siteModuleId": 105,
-      "name": "room-back-1",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "E3AO4702",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1010,
-      "siteModuleId": 105,
-      "name": "room-drying-1",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "FB1AFBC6",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1017,
-      "siteModuleId": 105,
-      "name": "room-center-1",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "E19F5B18",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1018,
-      "siteModuleId": 105,
-      "name": "room-center-2",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "EAF7271D",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1019,
-      "siteModuleId": 105,
-      "name": "room-center-3",
-      "deviceType": "sensor",
-      "make": "Blue Maestro",
-      "model": "Tempo Disc",
-      "address": "E7B2C99B",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1100,
-      "siteModuleId": 105,
-      "name": "server",
-      "deviceType": "server",
-      "make": "Raspberry Pi",
-      "model": "4B",
-      "address": "",
-      "pollingInterval": 60
-    },
-    {
-      "id": 1050,
-      "siteModuleId": 105,
-      "name": "router",
-      "deviceType": "router",
-      "make": "InHand Networks",
-      "model": "IR915L",
-      "address": "192.168.2.1",
-      "pollingInterval": 60
-    },
-    {
-      "id": 1060,
-      "siteModuleId": 105,
-      "name": "BMU",
-      "deviceType": "BMU",
-      "make": "Blue Ion",
-      "model": "BI2-BMU-LV",
-      "address": "192.168.2.50",
-      "port": 502,
-      "protocol": "modbus",
-      "settings": "",
-      "pollingInterval": 30
-    },
-    {
-      "id": 1070,
-      "siteModuleId": 105,
-      "name": "ups",
-      "deviceType": "ups",
-      "make": "APC",
-      "model": "Smart UPS 500 Lithium Ion",
-      "address":"n/a",
-      "pollingInterval": 30
-    }
-  ],
-  "organizations": [
-    {
-      "id": 1,
-      "name": "Terraformation"
-    }
-  ],
-  "sites": [
-    {
-      "id": 11,
-      "organizationId": 1,
-      "name": "Future Forest",
-      "latitude": 0,
-      "longitude": 0
-    }
-  ],
-  "siteModules": [
-    {
-      "id": 105,
-      "siteId": 11,
-      "typeId": 2,
-      "name": "seedbank"
-    }
-  ],
-  "storageLocations": [
-    {
       "id": 1000,
-      "siteModuleId": 105,
-      "name": "Refrigerator 1",
-      "conditionId": "Refrigerator"
+      "name": "MyFakeUPS",
+      "type": "ups",
+      "make": "FakeUPSBrand",
+      "model": "FakeUPS9000",
+      "settings": {}
     },
     {
       "id": 1001,
-      "siteModuleId": 105,
-      "name": "Refrigerator 2",
-      "conditionId": "Refrigerator"
+      "name": "FakeRPi",
+      "type": "server",
+      "make": "Raspberry Pi",
+      "model": "4b",
+      "pollingInterval": 30,
+      "settings": {}
     },
     {
       "id": 1002,
-      "siteModuleId": 105,
-      "name": "Freezer 1",
-      "conditionId": "Freezer"
+      "name": "FakeRouter",
+      "type": "router",
+      "make": "InHand Networks",
+      "model": "IR915L",
+      "pollingInterval": 30,
+      "settings": 
+      {
+        "password": "FakeRouterPassword"
+      },
     },
     {
       "id": 1003,
-      "siteModuleId": 105,
-      "name": "Freezer 2",
-      "conditionId": "Freezer"
+      "name": "FakeCBWRelay",
+      "type": "relay",
+      "make": "ControlByWed",
+      "model": "WebRelay",
+      "address": "123.45.67.89",
+      "pollingInterval": 30,
+      "port": 12345,
     },
     {
       "id": 1004,
-      "siteModuleId": 105,
-      "name": "Refrigerator 3",
-      "conditionId": "Refrigerator"
+      "name": "FakeOmniSenseTempHumSensor",
+      "type": "sensor",
+      "parentId": 1005,
+      "make": "OmniSense",
+      "model": "S-11",
+      "address": "FAKEADDR",
     },
     {
       "id": 1005,
-      "siteModuleId": 105,
-      "name": "Freezer 3",
-      "conditionId": "Freezer"
-    }
-  ]
+      "name": "FakeOmniSenseHub",
+      "type": "hub",
+      "make": "OmniSense",
+      "pollingInterval": 30,
+    },
+    {
+      "id": 1006,
+      "name": "FakeModbusDevice",
+      "type": "sensor",
+      "make": "Blue Ion",
+      "model": "BI2-BMU-LV",
+      "address": "87.65.43.21",
+      "port": 54321,
+      "pollingInterval": 30,
+      "settings":
+      {
+        "rtu-over-tcp": true,
+        "holding": false,
+        "unit": 1,
+      }
+    },
+  ],
 }

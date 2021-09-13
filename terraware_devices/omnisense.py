@@ -28,7 +28,7 @@ class OmniSenseHub(TerrawareHub):
         self.recent_sensor_data = {}
         self.address = None
         gevent.spawn(self.run_syslog_server)
-        if self.local_sim:
+        if self._local_sim:
             gevent.spawn(self.sim)
 
     def run_syslog_server(self):

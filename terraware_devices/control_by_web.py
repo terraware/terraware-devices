@@ -12,7 +12,7 @@ class CBWRelayDevice(TerrawareDevice):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
-        self._host = dev_info["host"]
+        self._host = dev_info["address"]
         self._port = dev_info["port"]
         self._sim_state = 0
         self.last_update_time = None
@@ -54,6 +54,10 @@ class CBWRelayDevice(TerrawareDevice):
             </datavalues>'''
 
 
+########################################################################################################
+#### NOTE BSHARP: BROKEN - THIS WAS UNUSED when I took over the device manager. I'm leaving the code here
+#### but it is not included in device_manager, you can't create one of these, and the code has certainly rotten. 
+########################################################################################################
 # e.g. ControlByWeb X-DTHS-WMX
 class CBWTemperatureHumidityDevice(TerrawareDevice):
 
@@ -69,6 +73,10 @@ class CBWTemperatureHumidityDevice(TerrawareDevice):
         return {}
 
 
+########################################################################################################
+#### NOTE BSHARP: BROKEN - THIS WAS UNUSED when I took over the device manager. I'm leaving the code here
+#### but it is not included in device_manager, you can't create one of these, and the code has certainly rotten. 
+########################################################################################################
 # e.g. ControlByWeb X-405
 class CBWSensorHub(TerrawareHub):
 
@@ -76,10 +84,6 @@ class CBWSensorHub(TerrawareHub):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.address = dev_info["address"]
         self.polling_interval = dev_info["pollingInternal"]
-        self.devices = []
-
-    def add_device(self, device):
-        self.devices.append(device)
 
     # This code appears to be unused, since poll never returns anything...
     def get_timeseries_definitions(self):
@@ -87,7 +91,7 @@ class CBWSensorHub(TerrawareHub):
 
     # similar to the device poll method, but each name in the dictionary should include the server path
     def poll(self):
-        if self.local_sim == 'sim':
+        if self._local_sim:
             xml = self.sample_data()
         else:
             response = requests.get(f'http://{self.address}/state.xml')

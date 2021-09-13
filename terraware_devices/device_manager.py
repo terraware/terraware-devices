@@ -11,7 +11,11 @@ import random
 import logging
 import pathlib
 import base64  # temp for forwarding data to cloud server
-import datetime  # temp for forwarding data to cloud server
+
+# For timestamping our timeseries values locally since we batch them up and don't send immediately
+from datetime import timezone
+import datetime
+
 from typing import List
 
 # other imports
@@ -22,7 +26,6 @@ from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
 from .modbus import ModbusDevice
 from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
-from .blue_maestro import BlueMaestroDevice, find_blue_maestro_devices
 from .nut_ups import NutUpsDevice
 
 
@@ -45,19 +48,20 @@ class DeviceManager(object):
         # authoritative source of information about them, but so that on the other end, when analyzing or visualizing
         # the data, we have a way to query, for example, "Give me all temperature readings from facility #84".
         self.devices = []
-        self.has_bluetooth_devices = False
         self.start_time = None
-        self.diagnostic_mode = os.environ['DEVICE_MANAGER_DIAGNOSTIC_MODE']
 
-        self.server_path = os.environ['DEVICE_MANAGER_SERVER']
+        self.local_sim_file = os.environ.get('DEVICE_MANAGER_LOCAL_SIM_CONFIG_FILE', None)
+        self.local_sim = self.local_sim_file != None
 
-        self.offline_refresh_token = os.environ['DEVICE_MANAGER_OFFLINE_REFRESH_TOKEN']
-        self.access_token_request_url = os.environ['DEVICE_MANAGER_ACCESS_TOKEN_REQUEST_URL']
-        self.access_token = self.get_access_token_from_server()
+        self.diagnostic_mode = os.environ.get('DEVICE_MANAGER_DIAGNOSTIC_MODE', False)
 
-        self.local_sim = False
+        self.server_path = os.environ.get('DEVICE_MANAGER_SERVER')
 
-        self.facilities = os.environ['DEVICE_MANAGER_FACILITIES']
+        self.offline_refresh_token = os.environ.get('DEVICE_MANAGER_OFFLINE_REFRESH_TOKEN')
+        self.access_token_request_url = os.environ.get('DEVICE_MANAGER_ACCESS_TOKEN_REQUEST_URL')
+        self.refresh_access_token_from_server()
+
+        self.facilities = os.environ.get('DEVICE_MANAGER_FACILITIES', "[]")
         self.load_config_from_server(self.facilities)
 
         self.timeseries_values_to_send = []
@@ -95,7 +99,7 @@ class DeviceManager(object):
         # the hub object may want to enumerate the timeseries, so we only ask after all the child devices are linked to their hubs,
         # just so the devices can all assume they're fully constructed by the time this gets called.
         timeseries_definitions = []
-        timeseries_definitions.extend(newdevice.get_timeseries_definitions()) for newdevice in self.devices
+        timeseries_definitions.extend(newdevice.get_timesereis_definitions()) for newdevice in self.devices
         self.send_timeseries_definitions_to_server(timeseries_definitions)
 
         return count_added
@@ -127,8 +131,6 @@ class DeviceManager(object):
                 device.greenlet = gevent.spawn(self.device_polling_loop, device)
                 device_polling_greenlet_count += 1
         print('launched %d greenlet(s) for device & hub polling' % device_polling_greenlet_count)
-        if self.has_bluetooth_devices:
-            gevent.spawn(self.update_bluetooth_devices)
         self.start_time = time.time()
         while True:
             try:
@@ -141,63 +143,6 @@ class DeviceManager(object):
                 logging.warning('exception in handler: %s', ex)
                 logging.debug('exception details', ex)
             gevent.sleep(10)
-
-    # a greenlet for update bluetooth devices
-    # these are handles separately from other devices since we poll for a whole batch of devices in a single operation
-    def update_bluetooth_devices(self):
-        interface = self.controller.config.bluetooth_interface
-        scan_timeout = self.controller.config.bluetooth_scan_timeout
-        use_ubertooth = self.controller.config.get('use_ubertooth', False)
-        controller_path = self.controller.path_on_server() if self.controller.config.enable_server else ''
-        while True:
-            timestamp = time.time()
-
-            # get list of all devices currently in range
-            if self.local_sim:
-                dev_infos = []
-                for device in self.devices:
-                    if hasattr(device, 'label'):
-                        dev_infos.append({
-                            'label': device.label(),
-                            'temperature': random.uniform(10, 20),
-                            'humidity': random.uniform(20, 30),
-                            'rssi': -random.randint(40, 70),
-                        })
-            else:
-                try:
-                    dev_infos = find_blue_maestro_devices(timeout=scan_timeout, iface=interface, ubertooth=use_ubertooth)
-                except Exception as e:
-                    print('error in find_blue_maestro_devices')
-                    print(e)
-                    dev_infos = {}
-
-            # update our device objects and send values to server
-            seq_values = {}
-            found_count = 0
-            not_found_labels = []
-            for dev_info in dev_infos:
-                label = dev_info['label']
-                found = False
-                for device in self.devices:
-                    if hasattr(device, 'label') and device.label() == label:
-                        device_path = controller_path + '/' + device.server_path
-                        for metric in ['temperature', 'humidity', 'rssi']:
-                            metric_path = device_path + '/' + metric
-                            seq_values[metric_path] = dev_info[metric]
-                            if self.controller.config.enable_server:
-                                self.create_sequence(metric_path, 'numeric', decimal_places=2)  # TODO: determine data type and decimal places from device
-                        found_count += 1
-                        found = True
-                if not found:
-                    not_found_labels.append(label)
-            if self.controller.config.enable_server:
-                self.controller.sequences.update_multiple(seq_values)
-            print('blue maestro devices detected: %d, updated: %d' % (len(dev_infos), found_count))
-            if not_found_labels:
-                print('blue maestro devices not found in device list: %s' % (', '.join(not_found_labels)))
-
-            # sleep until next cycle
-            gevent.sleep(30)
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
     def watchdog_update(self):
@@ -224,20 +169,50 @@ class DeviceManager(object):
 
     # We use expiring access tokens for server access, and need to periodically request a new one; this is how you do that.
     # Called immediately on startup and then anytime a query fails
-    def get_access_token_from_server(self):
+    def refresh_access_token_from_server(self):
+        if self.diagnostic_mode:
+            print('refresh_access_token_from_server called')
+
+        if self.local_sim:
+            return
+
         request_url = self.access_token_request_url
         offline_refresh_token = self.offline_refresh_token
-        # assemble a request with those two and then return success or failure blah blah
+        access_token = None
+        parameters = {'client_id': 'brain', 'grant_type': 'refresh_token', 'refresh_token': offline_refresh_token}
+        while access_token is None:
+            try:
+                r = requests.get(request_url, params=parameters)
+                r.raise_for_status()
 
+                # There's other stuff in the response like 'expires_in' for how many seconds this is valid and stuff
+                # But we don't use them right now - could potentially preemptively request new tokens when that time
+                # is nearing to avoid serialized interruptions and maybe save a failed roundtrip or two.
+                json = r.json()
+                access_token = '{} {}'.format(json['token_type'], json['access_token'])
+                self.auth_header = CaseInsensitiveDict()
+                self.auth_header["Authorization"] = access_token
+            except Exception as ex:
+                print('error requesting access token from server {}: {}'.format(request_url, ex))
+                gevent.sleep(10)
+        
     def query_config_from_server(self, facilities):
+        if self.diagnostic_mode:
+            print('query_config_from_server called for facilities {}'.format(facilities))
+
+        if self.local_sim:
+            print('reading device manager config from local sim file {}'.self.local_sim_file)
+            with open(self.local_sim_file) as json_file:
+                site_info = json.loads(json_file.read())
+                return site_info['devices']
+
         server_name = self.server_path
-        secret_key = self.server_auth_key
         url = 'http://' + server_name + '/api/v1/device/all/config'
         device_infos = None
 
         while device_infos is None:
             try:
-                r = requests.get(url, auth=('', secret_key))
+                r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.get(url, headers=auth_header))
                 r.raise_for_status()
                 device_infos = r.json()['devices']
             except Exception as ex:
@@ -247,11 +222,92 @@ class DeviceManager(object):
         return device_infos
 
     def send_timeseries_definitions_to_server(self, timeseries_definitions):
-        pass
+        if self.diagnostic_mode:
+            print('send_timeseries_definitions_to_server called for timeseries {}'.format(timeseries_definitions))
+
+        if self.local_sim:
+            return
+
+        server_name = self.server_path
+        url = 'http://' + server_name + '/api/v1/blah/blah/blah'
+
+        # The incoming format of timseries_definitions is just a list of lists, where each contained list is four elements:
+        # [device id, timeseries name, data type, decimal places]. We blow each of these out into a dictionary just so it's
+        # a little more parseable on the server side.
+        timeseries_payload = [{'device_id': a[0], 'timeseries_name': a[1], 'data_type': a[2], 'decimal_places': a[3]} for a in timeseries_definitions]
+        success = False
+        while not success:
+            try:
+                r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.put(url, headers=auth_header, json=timeseries_payload))
+                r.raise_for_status()
+                success = True
+            except Exception as ex:
+                print('error sending timeseries definitions to server %s: %s' % (server_name, ex))
+                gevent.sleep(10)
 
     def record_timeseries_values_and_maybe_push_to_server(self, values):
+        if self.diagnostic_mode:
+            print('record_timeseries_values_and_maybe_push_to_server called for values {}'.format(values))
+
+        if self.local_sim:
+            return
+
         # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
-        pass
+        server_name = self.server_path
+        url = 'http://' + server_name + '/api/v1/some/other/thing'
+        
+        # From: https://www.geeksforgeeks.org/get-utc-timestamp-in-python/
+        dt = datetime.datetime.now(timezone.utc)
+        utc_time = dt.replace(tzinfo=timezone.utc)
+        utc_timestamp = utc_time.timestamp()
+
+        self.timeseries_values_to_send.extend(
+            [
+                {
+                    'timestamp': utc_timestamp,
+                    'device_id': key[0],
+                    'timeseries_name': key[1],
+                    'value': value
+                }
+                for key, value in values
+            ]
+        )
+
+        # This can turn into a "see if enough time has passed to batch up a bunch of these" but for testing I'm just
+        # sending immediately always.
+        if True:
+            success = False
+            while not success:
+                try:
+                    r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.put(url, headers=auth_header, json=self.timeseries_values_to_send))
+                    r.raise_for_status()
+                    success = True
+                except Exception as ex:
+                    print('error sending timeseries values to server %s: %s' % (server_name, ex))
+                    gevent.sleep(10)
+
+
+    def request_and_retry_on_token_expiration(request_lambda):
+        # To be really robust this should probably timeout after some period to make sure the other greenlets
+        # get to run, but that also means gracefully handling just utterly failed attempts to talk to the server
+        # which will certainly happen if the internet goes down, but so for now, just hang here and keep going in case
+        # it ever comes back. Other devices shouldn't have timeouts or anything that prevent us from resuming if and
+        # when things come back, and it just means we'll miss a bunch of device samples - but that would happen in
+        # any case, it's just a question of which samples we end up missing.
+        #
+        # I'm actually not sure if Python lambdas / closures capture by reference or value or what, but safest just
+        # to say this lambda should NOT capture self.auth_header so we can pass it in every time and make sure it is
+        # using the new value every time.
+        #
+        # This - https://stackoverflow.com/questions/2295290/what-do-lambda-function-closures-capture - makes
+        # it sound like it's captured by reference and it would work to capture self.auth_header, but I think it
+        # makes the code more legible to pass it as an arg so I'm leaving it this way.
+        while True:
+            r = request_lambda(self.auth_header)
+            if (r.status_code == 401):
+                self.refresh_access_token_from_server()
+            else:
+                return r
 
     # This is sort of a glorified dictionary lookup, and it could be extracted out of this file and
     # we could do something like walk the directory and ask each py file to add class defs to some
@@ -261,16 +317,17 @@ class DeviceManager(object):
         dev_type = dev_info['type']
         make = dev_info['make']
         model = dev_info['model']
-        server_path = dev_info['serverPath']
         address = dev_info['address']
         polling_interval = dev_info['pollingInterval']
 
         port = dev_info.get('port')
         protocol = dev_info.get('protocol')
 
-        if dev_type == 'sensor' and make == 'Blue Maestro' and model == 'Tempo Disc':
-            return BlueMaestroDevice
-        elif dev_type == 'ups':
+        # This list doesn't include all the things we have driver classes for. The missing ones (bluetooth stuff,
+        # two of the ControlByWeb devices) were unused when I took over the device manager in 9/13/2021 and therefore
+        # I couldn't test or validate the code. I left those classes in, with comments, and removed them from this
+        # list so if they're needed again it's clear the code will need work and testing.
+        if dev_type == 'ups':
             return NutUpsDevice
         elif dev_type == 'server' and make == 'Raspberry Pi':
             return RasPiDevice
@@ -278,10 +335,6 @@ class DeviceManager(object):
             return InHandRouterDevice
         elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
             return CBWRelayDevice
-        elif dev_type == 'sensor' and make == 'ControlByWeb' and model == 'X-DTHS-WMX':
-            return CBWTemperatureHumidityDevice
-        elif dev_type == "hub" and make == "ControlByWeb":
-            return CBWSensorHub
         elif dev_type == 'sensor' and make == 'OmniSense' and model == 'S-11':
             return OmniSenseTemperatureHumidityDevice
         elif dev_type == "hub" and make == "OmniSense":

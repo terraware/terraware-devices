@@ -51,14 +51,11 @@ class InHandRouterDevice(TerrawareDevice):
         self._address = dev_info["address"]
         self._username = "adm"
 
-        settings = dev_info["settings"].split(";")
-        password_setting = next(x for x in settings if x.startswith("password="), None)
-
         self._password = ""
-        if (password_setting)
-            self._password = password_setting.split("=")[1]
+        if dev_info.get("settings") and dev_info.get("settings").get("password")
+            self._password = dev_info["settings"]["password"]
         else
-            print('Error: InHandRouterDevice received no "password=xxxxxx" in its device configuration settings!')
+            print('Error: InHandRouterDevice received no "settings" dict with "password": "xxxxx" as a field in its device configuration settings!')
 
         print('created InHandRouterDevice with address %s' % address)
 
@@ -69,7 +66,7 @@ class InHandRouterDevice(TerrawareDevice):
         pass
 
     def poll(self):
-        if self.local_sim:
+        if self._local_sim:
             values = {
                 (self.id, 'signal_stength'): 18
             }

@@ -15,19 +15,24 @@ class ModbusDevice(TerrawareDevice):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
-        settings_items = dev_info["settings"].split(';')
-        self._host = dev_info["host"]
+        self._host = dev_info["address"]
         self._unit = 1  # aka modbus slave number
-        for setting in settings_items:
-            if setting.startswith('unit='):
-                self._unit = int(setting.split('=')[1])
-        self.last_update_time = None
-        framer = ModbusRtuFramer if ('rtu-over-tcp' in settings_items) else ModbusSocketFramer
 
-        host = dev_info["host"]
+        self._read_holding = False
+        rtu_over_tcp = False
+        settings_items = dev_info.get('settings')
+        if settings_items:
+            if settings_items.get("unit"):
+                self._unit = settings_items["unit"]
+            rtu_over_tcp = settings_items.get('rtu-over-tcp', False)
+            self._read_holding = settings_items.get('holding', False)
+
+        self.last_update_time = None
+
+        framer = ModbusRtuFramer if rtu_over_tcp else ModbusSocketFramer
+
         port = dev_info["port"]
-        self._modbus_client = ModbusTcpClient(host, port=port, framer=framer)
-        self._read_holding = ('holding' in settings_items)
+        self._modbus_client = ModbusTcpClient(self._host, port=port, framer=framer)
         self._seq_infos = []
 
         spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'

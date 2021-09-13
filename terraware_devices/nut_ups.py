@@ -125,5 +125,9 @@ class NutUpsDevice(TerrawareDevice):
         pass
 
     def poll(self):
+        if self._local_sim:
+            return {(device_id, 'ups_status'    ): UpsStatus.online, 
+                    (device_id, 'battery_charge'): 89}
+        
         return poll_upsc(self.id)
 
