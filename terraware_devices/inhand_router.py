@@ -52,12 +52,13 @@ class InHandRouterDevice(TerrawareDevice):
         self._username = "adm"
 
         self._password = ""
-        if dev_info.get("settings") and dev_info.get("settings").get("password")
+        settings_items = dev_info.get("settings")
+        if settings_items and "password" in settings_items:
             self._password = dev_info["settings"]["password"]
-        else
+        else:
             print('Error: InHandRouterDevice received no "settings" dict with "password": "xxxxx" as a field in its device configuration settings!')
 
-        print('created InHandRouterDevice with address %s' % address)
+        print('created InHandRouterDevice with address %s' % self._address)
 
     def get_timeseries_definitions(self):
         return [[self.id, 'signal_strength', 'numeric', 2]]

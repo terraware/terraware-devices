@@ -23,21 +23,22 @@
       "type": "router",
       "make": "InHand Networks",
       "model": "IR915L",
+      "address": "101.101.101.101",
       "pollingInterval": 30,
       "settings": 
       {
         "password": "FakeRouterPassword"
-      },
+      }
     },
     {
       "id": 1003,
       "name": "FakeCBWRelay",
       "type": "relay",
-      "make": "ControlByWed",
+      "make": "ControlByWeb",
       "model": "WebRelay",
       "address": "123.45.67.89",
       "pollingInterval": 30,
-      "port": 12345,
+      "port": 12345
     },
     {
       "id": 1004,
@@ -46,14 +47,14 @@
       "parentId": 1005,
       "make": "OmniSense",
       "model": "S-11",
-      "address": "FAKEADDR",
+      "address": "FAKEADDR"
     },
     {
       "id": 1005,
       "name": "FakeOmniSenseHub",
       "type": "hub",
       "make": "OmniSense",
-      "pollingInterval": 30,
+      "pollingInterval": 30
     },
     {
       "id": 1006,
@@ -62,14 +63,15 @@
       "make": "Blue Ion",
       "model": "BI2-BMU-LV",
       "address": "87.65.43.21",
-      "port": 54321,
+      "port": 23456,
       "pollingInterval": 30,
+      "protocol": "modbus",
       "settings":
       {
         "rtu-over-tcp": true,
         "holding": false,
-        "unit": 1,
+        "unit": 1
       }
-    },
-  ],
+    }
+  ]
 }

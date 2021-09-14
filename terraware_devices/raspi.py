@@ -20,6 +20,14 @@ class RasPiDevice(TerrawareDevice):
     def reconnect(self):
         pass
 
+    def get_timeseries_definitions(self):
+        # THIS IS ONLY SUFFICIENT FOR LOCAL SIM MODE.
+        # This particular 'sensor' is pretty complex since it can dynamically generate new timeseries based on what drives are plugged in
+        # and whatnot. We'll need to figure out how to authoritatively enumerate all of this (or just change the class to only report
+        # some fixed smaller set of timeseries.)
+        timeseries_names = ['cpu_idle', 'cpu_iowait', 'cpu_system', 'cpu_user', 'memory_available', 'memory_total', 'temperature', 'uptime']
+        return [[self.id, x, 'numeric', 2] for x in timeseries_names]
+
     def poll(self):
         if self._local_sim:
             gigabyte = 1024*1024*1024

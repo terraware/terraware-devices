@@ -16,7 +16,7 @@ class CBWRelayDevice(TerrawareDevice):
         self._port = dev_info["port"]
         self._sim_state = 0
         self.last_update_time = None
-        print('created relay device (%s:%d)' % (host, port))
+        print('created relay device (%s:%d)' % (self._host, self._port))
 
     def get_timeseries_definitions(self):
         return [[self.id, 'relay-1', 'numeric', 2]]

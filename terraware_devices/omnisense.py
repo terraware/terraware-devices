@@ -23,13 +23,15 @@ class OmniSenseHub(TerrawareHub):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         global hub_instance
         hub_instance = self
-        self.devices = []
         self.polling_interval = dev_info["pollingInterval"]
         self.recent_sensor_data = {}
         self.address = None
         gevent.spawn(self.run_syslog_server)
         if self._local_sim:
             gevent.spawn(self.sim)
+
+    def get_timeseries_definitions(self):
+        return []
 
     def run_syslog_server(self):
         ip_address = current_ip_address()

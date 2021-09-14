@@ -113,10 +113,11 @@ class NutUpsDevice(TerrawareDevice):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
-        init_nut_server(True)
 
-        # For testing
-        print(poll_upsc())
+        if not self._local_sim:
+            init_nut_server(True)
+            # For testing
+            print(poll_upsc(self.id))
 
     def get_timeseries_definitions(self):
         return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['ups_status', 'battery_charge']]

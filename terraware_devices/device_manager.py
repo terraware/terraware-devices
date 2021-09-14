@@ -18,6 +18,8 @@ import datetime
 
 from typing import List
 
+import os
+
 # other imports
 import requests
 from .base import TerrawareDevice, TerrawareHub
@@ -77,11 +79,11 @@ class DeviceManager(object):
             device = None
             device_class = self.get_device_class_to_instantiate(dev_info)
             if device_class:
-                device = device_class(dev_info, spec_path, self.local_sim, self.diagnostic_mode, spec_path)
+                device = device_class(dev_info, self.local_sim, self.diagnostic_mode, spec_path)
                 self.devices.append(device)
                 count_added += 1
             else:
-                print('device not recognized; type: %s, make: %s, model: %s' % (dev_type, make, model))
+                print('device not recognized: {}'.format(dev_info))
 
         # For devices that are children hooked to hubs, find the hubs and link them up.
         for device in self.devices:
@@ -203,7 +205,7 @@ class DeviceManager(object):
             print('query_config_from_server called for facilities {}'.format(facilities))
 
         if self.local_sim:
-            print('reading device manager config from local sim file {}'.self.local_sim_file)
+            print('reading device manager config from local sim file {}'.format(self.local_sim_file))
             with open(self.local_sim_file) as json_file:
                 site_info = json.loads(json_file.read())
                 return site_info['devices']
@@ -316,13 +318,9 @@ class DeviceManager(object):
     # dictionary so there's not even a direct awareness of the various sensor classes here in this
     # file. But this seems like the right compromise of legibility and decoupling at the moment.
     def get_device_class_to_instantiate(self, dev_info):
-        dev_type = dev_info['type']
-        make = dev_info['make']
-        model = dev_info['model']
-        address = dev_info['address']
-        polling_interval = dev_info['pollingInterval']
-
-        port = dev_info.get('port')
+        dev_type = dev_info.get('type')
+        make = dev_info.get('make')
+        model = dev_info.get('model')
         protocol = dev_info.get('protocol')
 
         # This list doesn't include all the things we have driver classes for. The missing ones (bluetooth stuff,
