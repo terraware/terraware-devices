@@ -20,7 +20,7 @@ from typing import List
 
 # other imports
 import requests
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 from .control_by_web import CBWRelayDevice, CBWSensorHub, CBWTemperatureHumidityDevice
 from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
 from .modbus import ModbusDevice
@@ -47,21 +47,21 @@ class DeviceManager(object):
         # One final detail is that we do then inform the server about all these timeseries, not because it is an
         # authoritative source of information about them, but so that on the other end, when analyzing or visualizing
         # the data, we have a way to query, for example, "Give me all temperature readings from facility #84".
+        self.diagnostic_mode = os.environ.get('DIAGNOSTIC_MODE', False)
+
         self.devices = []
         self.start_time = None
 
-        self.local_sim_file = os.environ.get('DEVICE_MANAGER_LOCAL_SIM_CONFIG_FILE', None)
+        self.local_sim_file = os.environ.get('LOCAL_SIM_CONFIG_FILE', None)
         self.local_sim = self.local_sim_file != None
 
-        self.diagnostic_mode = os.environ.get('DEVICE_MANAGER_DIAGNOSTIC_MODE', False)
+        self.server_path = os.environ.get('SERVER')
 
-        self.server_path = os.environ.get('DEVICE_MANAGER_SERVER')
-
-        self.offline_refresh_token = os.environ.get('DEVICE_MANAGER_OFFLINE_REFRESH_TOKEN')
-        self.access_token_request_url = os.environ.get('DEVICE_MANAGER_ACCESS_TOKEN_REQUEST_URL')
+        self.offline_refresh_token = os.environ.get('OFFLINE_REFRESH_TOKEN')
+        self.access_token_request_url = os.environ.get('ACCESS_TOKEN_REQUEST_URL')
         self.refresh_access_token_from_server()
 
-        self.facilities = os.environ.get('DEVICE_MANAGER_FACILITIES', "[]")
+        self.facilities = os.environ.get('FACILITIES', "[]")
         self.load_config_from_server(self.facilities)
 
         self.timeseries_values_to_send = []
@@ -85,21 +85,22 @@ class DeviceManager(object):
 
         # For devices that are children hooked to hubs, find the hubs and link them up.
         for device in self.devices:
-            if device.hub_id:
-                hub_device = next(x for x in self.devices if x.id == hub_id, None)
+            if device.parent_id:
+                hub_device = next((x for x in self.devices if x.id == device.parent_id), None)
                 if hub_device:
                     if hasattr(hub_device, 'add_device'):
                         hub_device.add_device(device)
                     else:
-                        print('Error: Device {} has hub id {}, but device with that id is not a hub! (does not inherit from TerrawareHub).'.format(device.name, device.hub_id))
+                        print('Error: Device {} has hub id {}, but device with that id is not a hub! (does not inherit from TerrawareHub).'.format(device.name, device.parent_id))
                 else:
-                    print('Error: Device {} has hub id {}, but no device with that id exists! Did you forget to add the hub to the configuration?'.format(device.name, device.hub_id))
+                    print('Error: Device {} has hub id {}, but no device with that id exists! Did you forget to add the hub to the configuration?'.format(device.name, device.parent_id))
         
         # We wait until here to query timeseries rather than asking right after creating the device, because in some cases 
         # the hub object may want to enumerate the timeseries, so we only ask after all the child devices are linked to their hubs,
         # just so the devices can all assume they're fully constructed by the time this gets called.
         timeseries_definitions = []
-        timeseries_definitions.extend(newdevice.get_timesereis_definitions()) for newdevice in self.devices
+        for newdevice in self.devices:
+            timeseries_definitions.extend(newdevice.get_timeseries_definitions())
         self.send_timeseries_definitions_to_server(timeseries_definitions)
 
         return count_added
@@ -118,7 +119,8 @@ class DeviceManager(object):
             self.record_timeseries_values_and_maybe_push_to_server(values)
 
             if self.diagnostic_mode:
-                print('    %s: %.2f' % (id_name_pair, value)) for id_name_pair, value in values.items()
+                for id_name_pair, value in values.items():
+                    print('    %s: %.2f' % (id_name_pair, value))
 
             # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration

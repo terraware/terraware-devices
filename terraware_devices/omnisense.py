@@ -2,7 +2,7 @@ import random
 import socket
 import socketserver
 import gevent
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 
 
 # for now we assume a single omnisense hub object

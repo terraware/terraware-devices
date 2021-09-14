@@ -2,7 +2,7 @@ import subprocess
 import os.path
 import re
 from enum import Enum
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 
 UpsStatus = Enum('UpsStatus', 'online onbattery lowbattery unknown')
 

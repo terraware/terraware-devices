@@ -1,6 +1,6 @@
 import gevent
 import pexpect
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 
 
 sample_status_lines = """

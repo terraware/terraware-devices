@@ -8,7 +8,7 @@ import gevent
 from pymodbus.client.sync import ModbusTcpClient
 from pymodbus.transaction import ModbusRtuFramer, ModbusSocketFramer
 
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 
 
 class ModbusDevice(TerrawareDevice):

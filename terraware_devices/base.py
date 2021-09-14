@@ -39,7 +39,7 @@ class TerrawareDevice(ABC):
         self._name = dev_info["name"]
         self._local_sim = local_sim
         self._diagnostic_mode = diagnostic_mode
-        self._hub_id = dev_info.get("hubId")
+        self._parent_id = dev_info.get("parentId")
 
     @property
     def id(self):
@@ -58,8 +58,8 @@ class TerrawareDevice(ABC):
         return self._server_path
 
     @property
-    def hub_id(self):
-        return self._hub_id
+    def parent_id(self):
+        return self._parent_id
     
     
 class TerrawareHub(TerrawareDevice):
@@ -69,9 +69,9 @@ class TerrawareHub(TerrawareDevice):
         self._devices = []
 
     def add_device(self, device):
-        if device.hub_id != self.id:
-            print('Error: Trying to add device {} with hub_id {} to device {} with id {}, hub_id and id should match!'.format(device.name, device.hub_id, self.name, self.id))
-        else
+        if device.parent_id != self.id:
+            print('Error: Trying to add device {} with parent_id {} to device {} with id {}, parent_id and id should match!'.format(device.name, device.parent_id, self.name, self.id))
+        else:
             self._devices.append(device)
 
     @property

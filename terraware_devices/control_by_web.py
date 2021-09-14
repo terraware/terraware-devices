@@ -5,7 +5,7 @@ import requests
 from io import BytesIO
 from xml.etree import ElementTree
 import gevent
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 
 
 class CBWRelayDevice(TerrawareDevice):

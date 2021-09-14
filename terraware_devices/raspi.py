@@ -3,7 +3,7 @@ import gevent
 import logging
 import psutil
 import time
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 
 
 # performs monitoring a raspberry pi
@@ -21,7 +21,7 @@ class RasPiDevice(TerrawareDevice):
         pass
 
     def poll(self):
-        if self.local_sim:
+        if self._local_sim:
             gigabyte = 1024*1024*1024
 
             # CPU percentages should add up to 100 even with fake data since there
