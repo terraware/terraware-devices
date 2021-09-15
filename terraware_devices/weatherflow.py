@@ -63,7 +63,7 @@ class TempestWeatherStation(TerrawareDevice):
 
     def poll(self):
         result = self._state
-        #self._state = {}
+        self._state = {}
         return result
 
     def reconnect(self):

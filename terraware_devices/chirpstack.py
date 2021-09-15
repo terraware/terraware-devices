@@ -6,6 +6,7 @@ import gevent
 import json
 import os
 import ipaddress
+import random
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
@@ -51,7 +52,7 @@ class ChirpStackUplinkHandler(BaseHTTPRequestHandler):
         return Parse(body, pl)
 
 class ChirpStackHub(TerrawareHub):
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
 
         self.gateway_port = dev_info['port']
@@ -66,8 +67,12 @@ class ChirpStackHub(TerrawareHub):
 
     def notify_all_devices_added(self):
         if self._local_sim:
+            if self._diagnostic_mode:
+                print('ChirpStackHub got notification all children added, spawning local simulation')
             gevent.spawn(self.sim)
         else:
+            if self._diagnostic_mode:
+                print('ChirpStackHub got notification all children added, spawning chirpstack listening service')
             gevent.spawn(self.run_chirpstack_listener)
 
     def run_chirpstack_listener(self):
@@ -118,7 +123,7 @@ class ChirpStackHub(TerrawareHub):
             else:
                 # Test dragino soil sensor
                 self.process_uplink('a84041e7b182a733', b'\x00\x00\x00\x00\x03\x10\xfd\x00\x04\x40\x00')
-            gevent.sleep(5)
+            gevent.sleep(1)
 
     def process_uplink(self, dev_eui: str, payload: bytes):
         sensor_address = dev_eui.lower()
@@ -227,12 +232,14 @@ class SenseCapSoilSensor(LoRaSensor):
     def receive_payload(self, payload: bytearray):
         if payload[1] == 0x7 and payload[2] == 0x10:
             moisture_raw = int.from_bytes(payload[3:7], 'little', signed=False)
-            self.set_state('moisture', float(moisture_raw) / 1000)
-            print('sensecap soil moisture set to {}'.format(self.state))
+            moisture = float(moisture_raw) / 1000
+            self.set_state('moisture', moisture)
+            print('sensecap soil moisture set to {}'.format(moisture))
         elif payload[1] == 0x6 and payload[2] == 0x10:
             temperature_raw = int.from_bytes(payload[3:7], 'little', signed=True)
-            self.set_state('temperature', float(temperature_raw) / 1000)
-            print('sensecap soil temperature set to {}'.format(self.state))
+            temperature = float(temperature_raw) / 1000
+            self.set_state('temperature', temperature)
+            print('sensecap soil temperature set to {}'.format(temperature))
 
     def get_timeseries_definitions(self):
         return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'moisture']]
@@ -253,16 +260,19 @@ class DraginoSoilSensor(LoRaSensor):
 
     def receive_payload(self, payload: bytes):
         moisture_raw = int.from_bytes(payload[4:6], 'big', signed=False)
-        self.set_state('moisture', float(moisture_raw) / 100)
-        print('dragino soil moisture set to {}'.format(self.state))
+        moisture = float(moisture_raw) / 100
+        self.set_state('moisture', moisture)
+        print('dragino soil moisture set to {}'.format(moisture))
 
         temperature_raw = int.from_bytes(payload[6:8], 'big', signed=True)
-        self.set_state('temperature', float(temperature_raw) / 100)
-        print('dragino soil temperature set to {}'.format(self.state))
+        temperature = float(temperature_raw) / 100
+        self.set_state('temperature', temperature)
+        print('dragino soil temperature set to {}'.format(temperature))
 
         conductivity_raw = int.from_bytes(payload[8:10], 'big', signed=False)
+        conductivity = conductivity_raw
         self.set_state('conductivity', conductivity_raw)
-        print('dragino soil conductivity set to {}'.format(self.state))
+        print('dragino soil conductivity set to {}'.format(conductivity))
 
     def get_timeseries_definitions(self):
         return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'moisture', 'conductivity']]
