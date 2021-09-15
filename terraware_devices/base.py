@@ -26,20 +26,15 @@ class TerrawareDevice(ABC):
         to be the id of this device, for hubs that return the timeseries values of their child devices."""
         ...
 
-    def set_server_path(self, path: str) -> None:
-        """Sets the path of this device on the server (relative to the site)."""
-        self.server_path = path
-
-    def set_polling_interval(self, polling_interval: float) -> None:
-        """Sets the time between polling calls, in seconds."""
-        self.polling_interval = polling_interval
-
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         self._id = dev_info["id"]
         self._name = dev_info["name"]
         self._local_sim = local_sim
         self._diagnostic_mode = diagnostic_mode
         self._parent_id = dev_info.get("parentId")
+
+        # 0 means "do not poll this device"
+        self._polling_interval = dev_info.get("pollingInterval", 0)
 
     @property
     def id(self):
@@ -50,16 +45,12 @@ class TerrawareDevice(ABC):
         return self._name
 
     @property
-    def diagnostic_mode(self):
-        return self._diagnostic_mode
-
-    @property
-    def server_path(self):
-        return self._server_path
-
-    @property
     def parent_id(self):
         return self._parent_id
+
+    @property
+    def polling_interval(self):
+        return self._polling_interval
     
     
 class TerrawareHub(TerrawareDevice):
@@ -77,4 +68,8 @@ class TerrawareHub(TerrawareDevice):
     @property
     def devices(self):
         return self._devices
+
+    def notify_all_devices_added(self):
+        # This is called after all child sensors are added to a hub so you can e.g. start a listener service to get sensor data.
+        ...
     

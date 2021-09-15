@@ -6,6 +6,7 @@
       "type": "ups",
       "make": "FakeUPSBrand",
       "model": "FakeUPS9000",
+      "pollingInterval": 5,
       "settings": {}
     },
     {
@@ -14,7 +15,7 @@
       "type": "server",
       "make": "Raspberry Pi",
       "model": "4b",
-      "pollingInterval": 30,
+      "pollingInterval": 5,
       "settings": {}
     },
     {
@@ -24,7 +25,7 @@
       "make": "InHand Networks",
       "model": "IR915L",
       "address": "101.101.101.101",
-      "pollingInterval": 30,
+      "pollingInterval": 5,
       "settings": 
       {
         "password": "FakeRouterPassword"
@@ -37,40 +38,94 @@
       "make": "ControlByWeb",
       "model": "WebRelay",
       "address": "123.45.67.89",
-      "pollingInterval": 30,
+      "pollingInterval": 5,
       "port": 12345
     },
     {
       "id": 1004,
       "name": "FakeOmniSenseTempHumSensor",
       "type": "sensor",
-      "parentId": 1005,
+      "parentId": 1006,
       "make": "OmniSense",
       "model": "S-11",
-      "address": "FAKEADDR"
+      "address": "2933027B"
     },
     {
       "id": 1005,
-      "name": "FakeOmniSenseHub",
-      "type": "hub",
+      "name": "FakeOmniSenseTempHumSensor2",
+      "type": "sensor",
+      "parentId": 1006,
       "make": "OmniSense",
-      "pollingInterval": 30
+      "model": "S-11",
+      "address": "293303AC"
     },
     {
       "id": 1006,
+      "name": "FakeOmniSenseHub",
+      "type": "hub",
+      "make": "OmniSense",
+      "pollingInterval": 5
+    },
+    {
+      "id": 1007,
       "name": "FakeModbusDevice",
       "type": "sensor",
       "make": "Blue Ion",
       "model": "BI2-BMU-LV",
       "address": "87.65.43.21",
       "port": 23456,
-      "pollingInterval": 30,
+      "pollingInterval": 5,
       "protocol": "modbus",
       "settings":
       {
         "rtu-over-tcp": true,
         "holding": false,
         "unit": 1
+      }
+    },
+    {
+      "id": 1008,
+      "name": "FakeSenseCapSensor",
+      "type": "sensor",
+      "make": "SenseCAP",
+      "model": "Soil Moisture",
+      "address": "2cf7f12121000107",
+      "pollingInterval": 5,
+      "parentId": 1010
+    },
+    {
+      "id": 1009,
+      "name": "FakeDraginoSensor",
+      "type": "sensor",
+      "make": "Dragino",
+      "model": "LSE01",
+      "address": "a84041e7b182a733",
+      "pollingInterval": 5,
+      "parentId": 1010
+    },
+    {
+      "id": 1010,
+      "name": "FakeChirpstackHub",
+      "type": "hub",
+      "make": "SenseCAP",
+      "model": "Chirpstack Hub",
+      "address": "111.111.111.111",
+      "port": 4567,
+      "settings":
+      {
+        "applicationId": 1,
+        "apiToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "id": 1011,
+      "name": "FakeWeatherStation",
+      "type": "sensor",
+      "make": "WeatherFlow",
+      "model": "Tempest",
+      "settings":
+      {
+        "unitSystem": "metric"
       }
     }
   ]

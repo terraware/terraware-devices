@@ -13,3 +13,8 @@ pymodbus~=2.4
 
 # rhizo-server API is under development, so minor versions might have breaking changes
 rhizo-client~=0.1.5
+
+# chirpstack API for LoRa devices
+chirpstack-api>=3.11.0
+
+pysmartweatherudp>=0.1.7

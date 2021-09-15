@@ -4,7 +4,14 @@ import re
 from enum import Enum
 from .base import TerrawareDevice, TerrawareHub
 
-UpsStatus = Enum('UpsStatus', 'online onbattery lowbattery unknown')
+# Originally this was an enum but python enums don't auto-cast to numeric types very well and we store this
+# as a timeseries so instead the sensor 'value' is an int and this is the list you import to convert them to strings
+# for readable display.
+UPS_ONLINE = 0
+UPS_ON_BATTERY = 1
+UPS_LOW_BATTERY = 2
+UPS_UNKNOWN = 3
+UPS_STATUS_NAMES = ['Online', 'On Battery', 'Low Battery', 'Unknown']
 
 # We could use the existence of these files in init_ to decide we don't need to start the services if they're already running, but just in case they get
 # hung or whatever, for now I just always kill them and restart them in init.
@@ -41,13 +48,13 @@ def status_from_string(ups_status_string):
     # It looks like most NUT drivers support 'ups.status' and they may return an arbitrary string but it SEEMS that
     # they guarantee they contain the substring 'OL', 'OB', or 'LB', flanked by newline/eol/whitespace, so this assumes
     # that's true and sufficient to parse all this.
-    result = UpsStatus.unknown
+    result = UPS_UNKNOWN
     if re.match('(^|\s)OL($|\s)', ups_status_string):
-        result = UpsStatus.online 
+        result = UPS_ONLINE 
     elif re.match('(^|\s)OB($|\s)', ups_status_string):
-        result = UpsStatus.onbattery 
+        result = UPS_ON_BATTERY
     elif re.match('(^|\s)LB($|\s)', ups_status_string):
-        result = UpsStatus.lowbattery
+        result = UPS_LOW_BATTERY
 
     return result
 
@@ -127,8 +134,8 @@ class NutUpsDevice(TerrawareDevice):
 
     def poll(self):
         if self._local_sim:
-            return {(device_id, 'ups_status'    ): UpsStatus.online, 
-                    (device_id, 'battery_charge'): 89}
+            return {(self.id, 'ups_status'    ): UPS_ONLINE, 
+                    (self.id, 'battery_charge'): 89}
         
         return poll_upsc(self.id)
 

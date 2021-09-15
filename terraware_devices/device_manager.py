@@ -29,6 +29,8 @@ from .modbus import ModbusDevice
 from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
 from .nut_ups import NutUpsDevice
+from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor
+from .weatherflow import TempestWeatherStation
 
 
 # manages a set of devices; each device handles a connection to physical hardware
@@ -91,12 +93,19 @@ class DeviceManager(object):
                 hub_device = next((x for x in self.devices if x.id == device.parent_id), None)
                 if hub_device:
                     if hasattr(hub_device, 'add_device'):
+                        if self.diagnostic_mode:
+                            print('Attached device {} to its parent (hub) device {}'.format(device.name, hub_device.name))
                         hub_device.add_device(device)
                     else:
                         print('Error: Device {} has hub id {}, but device with that id is not a hub! (does not inherit from TerrawareHub).'.format(device.name, device.parent_id))
                 else:
                     print('Error: Device {} has hub id {}, but no device with that id exists! Did you forget to add the hub to the configuration?'.format(device.name, device.parent_id))
         
+        # Let hubs know they all have their child sensors bound up so they can start services or whatever
+        for device in self.devices:
+            if hasattr(device, 'notify_all_devices_added'):
+                device.notify_all_devices_added()
+
         # We wait until here to query timeseries rather than asking right after creating the device, because in some cases 
         # the hub object may want to enumerate the timeseries, so we only ask after all the child devices are linked to their hubs,
         # just so the devices can all assume they're fully constructed by the time this gets called.
@@ -121,8 +130,10 @@ class DeviceManager(object):
             self.record_timeseries_values_and_maybe_push_to_server(values)
 
             if self.diagnostic_mode:
+                print('=== DEVICE POLLING LOOP [{}] - {} values received: ==='.format(device.name, len(values)))
                 for id_name_pair, value in values.items():
                     print('    %s: %.2f' % (id_name_pair, value))
+                print('======================================================')
 
             # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
@@ -136,16 +147,10 @@ class DeviceManager(object):
                 device_polling_greenlet_count += 1
         print('launched %d greenlet(s) for device & hub polling' % device_polling_greenlet_count)
         self.start_time = time.time()
+
+        # note $bsharp: I assume I can't return from run() or the device manager will just fully exit,
+        # not sure the best way to just say "Now just run the greenlets".
         while True:
-            try:
-                if self.handler:
-                    self.handler.update()
-            except KeyboardInterrupt:
-                print('exiting')
-                break
-            except Exception as ex:
-                logging.warning('exception in handler: %s', ex)
-                logging.debug('exception details', ex)
             gevent.sleep(10)
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
@@ -167,7 +172,7 @@ class DeviceManager(object):
         device_infos = self.query_config_from_server(self.facilities)
 
         count_added = self.create_devices(device_infos)
-        print('loaded %d devices from %s' % (count_added, server_name))
+        print('loaded %d devices from %s' % (count_added, self.local_sim_file if self.local_sim else self.server_path))
 
     # APIs for communicating with the terraware-server.
 
@@ -227,7 +232,10 @@ class DeviceManager(object):
 
     def send_timeseries_definitions_to_server(self, timeseries_definitions):
         if self.diagnostic_mode:
-            print('send_timeseries_definitions_to_server called for timeseries {}'.format(timeseries_definitions))
+            print('=== SEND TIMESERIES DEFINITIONS TO SERVER - values received: ===')
+            for a in timeseries_definitions:
+                print('    id: {}, name "{}", data type "{}", decimal places "{}"'.format(a[0], a[1], a[2], a[3]))
+            print('======================================================')
 
         if self.local_sim:
             return
@@ -250,9 +258,6 @@ class DeviceManager(object):
                 gevent.sleep(10)
 
     def record_timeseries_values_and_maybe_push_to_server(self, values):
-        if self.diagnostic_mode:
-            print('record_timeseries_values_and_maybe_push_to_server called for values {}'.format(values))
-
         if self.local_sim:
             return
 
@@ -341,6 +346,21 @@ class DeviceManager(object):
             return OmniSenseHub
         elif protocol == 'modbus':
             return ModbusDevice
+        
+        # SenseCap doesn't really have a model number / name for this sensor:
+        # https://www.seeedstudio.com/LoRaWAN-Soil-Moisture-and-Temperature-Sensor-EU868-p-4316.html
+        elif dev_type == 'sensor' and make == 'SenseCAP':
+            return SenseCapSoilSensor
+
+        # https://www.dragino.com/products/lora-lorawan-end-node/item/159-lse01.html
+        elif dev_type == 'sensor' and make == 'Dragino' and model == 'LSE01':
+            return DraginoSoilSensor
+
+        elif dev_type == 'hub' and make == 'SenseCAP':
+            return ChirpStackHub
+
+        elif dev_type == 'sensor' and make == 'WeatherFlow' and model == 'Tempest':
+            return TempestWeatherStation
 
 
 if __name__ == '__main__':

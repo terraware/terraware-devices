@@ -83,7 +83,6 @@ class CBWSensorHub(TerrawareHub):
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.address = dev_info["address"]
-        self.polling_interval = dev_info["pollingInternal"]
 
     # This code appears to be unused, since poll never returns anything...
     def get_timeseries_definitions(self):

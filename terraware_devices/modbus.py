@@ -43,10 +43,10 @@ class ModbusDevice(TerrawareDevice):
             for line in lines:
                 self._seq_infos.append(line)
 
-        print('created modbus device (%s:%d, unit: %d)' % (host, port, self._unit))
+        print('created modbus device (%s:%d, unit: %d)' % (self._host, port, self._unit))
 
     def get_timeseries_definitions(self):
-        return [[self.id, sequence.name, 'numeric', 2] for sequence in self._seq_infos]
+        return [[self.id, sequence['name'], 'numeric', 2] for sequence in self._seq_infos]
 
     def reconnect(self):
         self._modbus_client.close()
@@ -64,13 +64,10 @@ class ModbusDevice(TerrawareDevice):
                 value *= float(seq_info['scale_factor'])
                 values[(self.id, seq_info['name'])] = value
                 if self._diagnostic_mode:
-                    print('    %s/%s: %.2f' % (self.server_path, seq_info['name'], value))
-#                if int(seq_info['send_to_server']):
-#                    self._controller.sequence.create(seq_rel_path, 'numeric', decimal_places=2)
-#                    seq_values[full_seq_name] = value
+                    print('    (%s, %s): %.2f' % (self.id, seq_info['name'], value))
         if values:
             self.last_update_time = time.time()
-        print('received %d of %d value(s) from %s' % (len(values), len(self._seq_infos), self.server_path))
+        print('received %d of %d value(s) from %s' % (len(values), len(self._seq_infos), self._host))
         if len(values) != len(self._seq_infos):
             print('received fewer values than expected; reconnecting')
             self.reconnect()
