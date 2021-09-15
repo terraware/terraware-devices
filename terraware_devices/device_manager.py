@@ -29,8 +29,10 @@ from .modbus import ModbusDevice
 from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
 from .nut_ups import NutUpsDevice
-from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor
 from .weatherflow import TempestWeatherStation
+
+# DISABLED for now because the chirpstack stuff adds a full 45 minutes to the build time on every single iteration thanks to gRPC. :(
+#from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor
 
 
 # manages a set of devices; each device handles a connection to physical hardware
@@ -346,22 +348,25 @@ class DeviceManager(object):
             return OmniSenseHub
         elif protocol == 'modbus':
             return ModbusDevice
-        
-        # SenseCap doesn't really have a model number / name for this sensor:
-        # https://www.seeedstudio.com/LoRaWAN-Soil-Moisture-and-Temperature-Sensor-EU868-p-4316.html
-        elif dev_type == 'sensor' and make == 'SenseCAP':
-            return SenseCapSoilSensor
-
-        # https://www.dragino.com/products/lora-lorawan-end-node/item/159-lse01.html
-        elif dev_type == 'sensor' and make == 'Dragino' and model == 'LSE01':
-            return DraginoSoilSensor
-
-        elif dev_type == 'hub' and make == 'SenseCAP':
-            return ChirpStackHub
+ 
+# DISABLED FOR NOW - see comment up top at 'from .chirpstack...'       
+#        # SenseCap doesn't really have a model number / name for this sensor:
+#        # https://www.seeedstudio.com/LoRaWAN-Soil-Moisture-and-Temperature-Sensor-EU868-p-4316.html
+#        elif dev_type == 'sensor' and make == 'SenseCAP':
+#            return SenseCapSoilSensor
+#
+#        # https://www.dragino.com/products/lora-lorawan-end-node/item/159-lse01.html
+#        elif dev_type == 'sensor' and make == 'Dragino' and model == 'LSE01':
+#            return DraginoSoilSensor
+#
+#        elif dev_type == 'hub' and make == 'SenseCAP':
+#            return ChirpStackHub
 
         elif dev_type == 'sensor' and make == 'WeatherFlow' and model == 'Tempest':
             return TempestWeatherStation
 
+        else:
+            return None
 
 if __name__ == '__main__':
     d = DeviceManager()

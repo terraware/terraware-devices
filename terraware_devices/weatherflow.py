@@ -3,6 +3,8 @@
 # It's licensed under the MIT License so this use is permitted but the license needs to be included
 from pysmartweatherudp import SWReceiver
 from .base import TerrawareDevice, TerrawareHub
+import gevent
+import random
 
 SENSOR_TYPES = [
     'temperature',
@@ -30,7 +32,7 @@ SENSOR_TYPES = [
 ]
 
 class TempestWeatherStation(TerrawareDevice):
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
 
         self._unit_system = 'metric'
@@ -41,12 +43,17 @@ class TempestWeatherStation(TerrawareDevice):
 
         self._state = {}
 
-        module = SWReceiver(units=self._unit_system)
-        module.start()
-        module.registerCallback(self._update_callback)
+        if self._local_sim:
+            gevent.spawn(self.sim)
+        else:
+            module = SWReceiver(units=self._unit_system)
+            module.registerCallback(self._update_callback)
+            module.start()
 
     def _update_callback(self, data):
-        self._state = {(self.id, a): b if a in SENSOR_TYPES for (a, b) in data}
+        for (a, b) in data:
+            if a in SENSOR_TYPES:
+                self._state[(self.id, a)] = b
 
         if self.diagnostic_mode:
             print("Data received: %s %s %s %s", data.type, data.timestamp, data.precipitation, data.temperature)
@@ -56,8 +63,15 @@ class TempestWeatherStation(TerrawareDevice):
 
     def poll(self):
         result = self._state
-        self._state = {}
+        #self._state = {}
         return result
 
     def reconnect(self):
         pass
+
+    def sim(self):
+        while True:
+            for a in SENSOR_TYPES:
+                self._state[a] = random.randint(0,100)
+            gevent.sleep(5)
+

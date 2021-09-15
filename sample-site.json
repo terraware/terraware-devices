@@ -123,6 +123,7 @@
       "type": "sensor",
       "make": "WeatherFlow",
       "model": "Tempest",
+      "pollingInterval": 5,
       "settings":
       {
         "unitSystem": "metric"

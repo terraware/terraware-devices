@@ -1,10 +1,6 @@
 requests>=2.0
 pexpect>=4.8
 
-# bluepy is not actively maintained; see https://github.com/IanHarvey/bluepy/issues/403
-# It has a Linux-specific C extension, so skip install on other platforms.
-bluepy~=1.3; platform_system=="Linux"
-
 # gevent versions are date-based so tell us nothing about breaking changes
 gevent>=20.9
 
@@ -15,6 +11,6 @@ pymodbus~=2.4
 rhizo-client~=0.1.5
 
 # chirpstack API for LoRa devices
-chirpstack-api>=3.11.0
+#chirpstack-api>=3.11.0
 
 pysmartweatherudp>=0.1.7
