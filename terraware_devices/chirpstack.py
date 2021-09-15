@@ -123,7 +123,7 @@ class ChirpStackHub(TerrawareHub):
             else:
                 # Test dragino soil sensor
                 self.process_uplink('a84041e7b182a733', b'\x00\x00\x00\x00\x03\x10\xfd\x00\x04\x40\x00')
-            gevent.sleep(1)
+            gevent.sleep(5)
 
     def process_uplink(self, dev_eui: str, payload: bytes):
         sensor_address = dev_eui.lower()
