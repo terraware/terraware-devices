@@ -17,6 +17,7 @@ from datetime import timezone
 import datetime
 
 from typing import List
+from collections import defaultdict
 
 import os
 
@@ -31,8 +32,7 @@ from .inhand_router import InHandRouterDevice
 from .nut_ups import NutUpsDevice
 from .weatherflow import TempestWeatherStation
 
-# DISABLED for now because the chirpstack stuff adds a full 45 minutes to the build time on every single iteration thanks to gRPC. :(
-#from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor
+from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor
 
 
 # manages a set of devices; each device handles a connection to physical hardware
@@ -67,10 +67,15 @@ class DeviceManager(object):
         self.access_token_request_url = os.environ.get('ACCESS_TOKEN_REQUEST_URL')
         self.refresh_access_token_from_server()
 
-        self.facilities = os.environ.get('FACILITIES', "[]")
+        facilities_string = os.environ.get('FACILITIES', None)
+        self.facilities = [int(a) for a in facilities_string.split(',')] if facilities_string else []
+    
+        if self.diagnostic_mode:
+            print ('Device Manager starting up with server {} for facilities {}'.format(self.server_path, self.facilities))
+
         self.load_config_from_server(self.facilities)
 
-        self.timeseries_values_to_send = []
+        self.timeseries_values_to_send = defaultdict(list)
 
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
@@ -207,9 +212,9 @@ class DeviceManager(object):
                 print('error requesting access token from server {}: {}'.format(request_url, ex))
                 gevent.sleep(10)
         
-    def query_config_from_server(self, facilities):
+    def query_config_from_server(self, facility_ids):
         if self.diagnostic_mode:
-            print('query_config_from_server called for facilities {}'.format(facilities))
+            print('query_config_from_server called for facilities {}'.format(facility_ids))
 
         if self.local_sim:
             print('reading device manager config from local sim file {}'.format(self.local_sim_file))
@@ -218,17 +223,25 @@ class DeviceManager(object):
                 return site_info['devices']
 
         server_name = self.server_path
-        url = 'http://' + server_name + '/api/v1/device/all/config'
-        device_infos = None
+        url = 'http://' + server_name + '/api/v1/facility/{}/devices'
+        
+        # All this is doing is "Ask the server for each facility's device list and combine them and return them" but all
+        # the error handling makes it look rather complicated.
+        device_infos = {}
+        for facility_id in facility_ids:
+            got_facility_devices = False
+            while not got_facility_devices:
+                try:
+                    r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.get(url.format(facility_id), headers=auth_header))
+                    r.raise_for_status()
 
-        while device_infos is None:
-            try:
-                r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.get(url, headers=auth_header))
-                r.raise_for_status()
-                device_infos = r.json()['devices']
-            except Exception as ex:
-                print('error requesting devices from server %s: %s' % (server_name, ex))
-                gevent.sleep(10)
+                    if self.diagnostic_mode:
+                        print('Received the following devices from server for facility id {}:'.format(facility_id))
+                    device_infos.update(r.json()['devices'])
+                    got_facility_devices = True
+                except Exception as ex:
+                    print('error requesting devices from server %s: %s' % (server_name, ex))
+                    gevent.sleep(10)
 
         return device_infos
 
@@ -243,46 +256,36 @@ class DeviceManager(object):
             return
 
         server_name = self.server_path
-        url = 'http://' + server_name + '/api/v1/blah/blah/blah'
+        url = 'http://' + server_name + '/api/v1/seedbank/timeseries/create'
 
         # The incoming format of timseries_definitions is just a list of lists, where each contained list is four elements:
-        # [device id, timeseries name, data type, decimal places]. We blow each of these out into a dictionary just so it's
-        # a little more parseable on the server side.
-        timeseries_payload = [{'device_id': a[0], 'timeseries_name': a[1], 'data_type': a[2], 'decimal_places': a[3]} for a in timeseries_definitions]
+        # [device id, timeseries name, data type, decimal places].
         success = False
         while not success:
             try:
-                r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.put(url, headers=auth_header, json=timeseries_payload))
+                r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.post(url, headers=auth_header, json=timeseries_definitions))
                 r.raise_for_status()
                 success = True
             except Exception as ex:
                 print('error sending timeseries definitions to server %s: %s' % (server_name, ex))
                 gevent.sleep(10)
 
+    # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
     def record_timeseries_values_and_maybe_push_to_server(self, values):
         if self.local_sim:
             return
 
-        # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
         server_name = self.server_path
-        url = 'http://' + server_name + '/api/v1/some/other/thing'
+        url = 'http://' + server_name + '/api/v1/seedbank/timeseries/values'
         
         # From: https://www.geeksforgeeks.org/get-utc-timestamp-in-python/
         dt = datetime.datetime.now(timezone.utc)
         utc_time = dt.replace(tzinfo=timezone.utc)
         utc_timestamp = utc_time.timestamp()
 
-        self.timeseries_values_to_send.extend(
-            [
-                {
-                    'timestamp': utc_timestamp,
-                    'device_id': key[0],
-                    'timeseries_name': key[1],
-                    'value': value
-                }
-                for key, value in values
-            ]
-        )
+        # The server-side API takes a dictionary 
+        for key, value in values:
+            self.timeseries_values_to_send[key].append(value)
 
         # This can turn into a "see if enough time has passed to batch up a bunch of these" but for testing I'm just
         # sending immediately always.
@@ -290,9 +293,10 @@ class DeviceManager(object):
             success = False
             while not success:
                 try:
-                    r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.put(url, headers=auth_header, json=self.timeseries_values_to_send))
+                    r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.post(url, headers=auth_header, json=self.timeseries_values_to_send.items()))
                     r.raise_for_status()
                     success = True
+                    self.timeseries_values_to_send = defaultdict(list)
                 except Exception as ex:
                     print('error sending timeseries values to server %s: %s' % (server_name, ex))
                     gevent.sleep(10)
@@ -349,18 +353,17 @@ class DeviceManager(object):
         elif protocol == 'modbus':
             return ModbusDevice
  
-# DISABLED FOR NOW - see comment up top at 'from .chirpstack...'       
-#        # SenseCap doesn't really have a model number / name for this sensor:
-#        # https://www.seeedstudio.com/LoRaWAN-Soil-Moisture-and-Temperature-Sensor-EU868-p-4316.html
-#        elif dev_type == 'sensor' and make == 'SenseCAP':
-#            return SenseCapSoilSensor
-#
-#        # https://www.dragino.com/products/lora-lorawan-end-node/item/159-lse01.html
-#        elif dev_type == 'sensor' and make == 'Dragino' and model == 'LSE01':
-#            return DraginoSoilSensor
-#
-#        elif dev_type == 'hub' and make == 'SenseCAP':
-#            return ChirpStackHub
+        # SenseCap doesn't really have a model number / name for this sensor:
+        # https://www.seeedstudio.com/LoRaWAN-Soil-Moisture-and-Temperature-Sensor-EU868-p-4316.html
+        elif dev_type == 'sensor' and make == 'SenseCAP':
+            return SenseCapSoilSensor
+
+        # https://www.dragino.com/products/lora-lorawan-end-node/item/159-lse01.html
+        elif dev_type == 'sensor' and make == 'Dragino' and model == 'LSE01':
+            return DraginoSoilSensor
+
+        elif dev_type == 'hub' and make == 'SenseCAP':
+            return ChirpStackHub
 
         elif dev_type == 'sensor' and make == 'WeatherFlow' and model == 'Tempest':
             return TempestWeatherStation

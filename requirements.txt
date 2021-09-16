@@ -11,6 +11,6 @@ pymodbus~=2.4
 rhizo-client~=0.1.5
 
 # chirpstack API for LoRa devices
-#chirpstack-api>=3.11.0
+chirpstack-api>=3.11.0
 
 pysmartweatherudp>=0.1.7

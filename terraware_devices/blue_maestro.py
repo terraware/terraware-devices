@@ -1,7 +1,7 @@
 import time
 import select
 import subprocess
-from .base import TerrawareDevice
+from .base import TerrawareDevice, TerrawareHub
 
 
 # internal state used by ubertooth_scan; could move into device manager
@@ -117,7 +117,7 @@ class BlueMaestroDevice(TerrawareDevice):
         print('created BlueMaestroDevice with label %s' % label)
 
     def get_timeseries_definitions(self):
-        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'humidity', 'rssi']]
+        return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['temperature', 'humidity', 'rssi']]
 
     def label(self):
         return self._label
