@@ -268,12 +268,21 @@ class DeviceManager(object):
         server_name = self.server_path
         url = server_name + 'api/v1/seedbank/timeseries/create'
 
+        create_timeseries_entries = [{
+            'deviceId': definition[0],
+            'timeseriesName': definition[1],
+            'type': definition[2].capitalize(),
+            'decimalPlaces': definition[3],
+        } for definition in timeseries_definitions]
+
+        payload = {'timeseries': create_timeseries_entries}
+
         # The incoming format of timseries_definitions is just a list of lists, where each contained list is four elements:
         # [device id, timeseries name, data type, decimal places].
         success = False
         while not success:
             try:
-                r = self.request_and_retry_on_token_expiration(requests.post, url, timeseries_definitions)
+                r = self.request_and_retry_on_token_expiration(requests.post, url, payload)
                 r.raise_for_status()
                 success = True
             except Exception as ex:
