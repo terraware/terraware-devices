@@ -14,6 +14,7 @@ import base64  # temp for forwarding data to cloud server
 
 # For timestamping our timeseries values locally since we batch them up and don't send immediately
 from datetime import timezone
+from datetime import date
 import datetime
 
 from typing import List
@@ -76,7 +77,7 @@ class DeviceManager(object):
 
         self.load_config_from_server(self.facilities)
 
-        self.timeseries_values_to_send = defaultdict(list)
+        self.timeseries_values_to_send = {}
 
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
@@ -232,7 +233,7 @@ class DeviceManager(object):
                 return site_info['devices']
 
         server_name = self.server_path
-        url = 'http://' + server_name + '/api/v1/facility/{}/devices'
+        url = server_name + 'api/v1/facility/{}/devices'
         
         # All this is doing is "Ask the server for each facility's device list and combine them and return them" but all
         # the error handling makes it look rather complicated.
@@ -265,7 +266,7 @@ class DeviceManager(object):
             return
 
         server_name = self.server_path
-        url = 'http://' + server_name + '/api/v1/seedbank/timeseries/create'
+        url = server_name + 'api/v1/seedbank/timeseries/create'
 
         # The incoming format of timseries_definitions is just a list of lists, where each contained list is four elements:
         # [device id, timeseries name, data type, decimal places].
@@ -285,16 +286,21 @@ class DeviceManager(object):
             return
 
         server_name = self.server_path
-        url = 'http://' + server_name + '/api/v1/seedbank/timeseries/values'
+        url = server_name + 'api/v1/seedbank/timeseries/values'
         
-        # From: https://www.geeksforgeeks.org/get-utc-timestamp-in-python/
-        dt = datetime.datetime.now(timezone.utc)
-        utc_time = dt.replace(tzinfo=timezone.utc)
-        utc_timestamp = utc_time.timestamp()
+        # From: https://stackoverflow.com/questions/53643007/converting-python-utc-timestamp-to-and-from-string/53643327
+        TIME_FORMAT='%Y-%m-%d %H:%M:%S'
+        ts = int(time.time()) # UTC timestamp
+        timestamp = datetime.datetime.fromtimestamp(ts, timezone.utc).strftime(TIME_FORMAT)
+        d1 = datetime.datetime.strptime(timestamp + "+0000", TIME_FORMAT + '%z')
+        ts1 = d1.timestamp()
 
         # The server-side API takes a dictionary 
-        for key, value in values:
-            self.timeseries_values_to_send[key].append(value)
+        for key in values.keys():
+            value = values[key]
+            if key not in self.timeseries_values_to_send:
+                self.timeseries_values_to_send[key] = []
+            self.timeseries_values_to_send[key].append([timestamp, str(value)])
 
         # This can turn into a "see if enough time has passed to batch up a bunch of these" but for testing I'm just
         # sending immediately always.
@@ -302,10 +308,22 @@ class DeviceManager(object):
             success = False
             while not success:
                 try:
-                    r = self.request_and_retry_on_token_expiration(requests.post, url, self.timeseries_values_to_send.items())
-                    r.raise_for_status()
+                    # iterating over a dictionary whose key is a tuple seems pretty squirrely - if you do for key, value in dict
+                    # the key and value are just individual parts of the tuple - weird.
+                    timeseries_values_list = []
+                    for key in self.timeseries_values_to_send.keys():
+                        # key is a 2-tuple of (device id, timeseries name).
+                        # value is a list of scalar samples.
+                        value = self.timeseries_values_to_send[key]
+                        if len(value) > 0:
+                            timeseries_values_list.append([key[0], key[1], value])
+                    if len(timeseries_values_list) > 0:
+                        if self.diagnostic_mode:
+                            print('Sending {} timeseries values to server'.format(len(timeseries_values_list)))
+                        r = self.request_and_retry_on_token_expiration(requests.post, url, timeseries_values_list)
+                        r.raise_for_status()
                     success = True
-                    self.timeseries_values_to_send = defaultdict(list)
+                    self.timeseries_values_to_send = {}
                 except Exception as ex:
                     print('error sending timeseries values to server %s: %s' % (server_name, ex))
                     gevent.sleep(10)
