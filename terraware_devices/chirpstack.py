@@ -189,7 +189,7 @@ class LoRaSensor(TerrawareDevice):
         self._state = {}
 
     def set_state(self, timeseries, value):
-        self._state[timeseries] = value
+        self._state[(self.id, timeseries)] = value
 
     def reconnect(self):
         pass
@@ -242,7 +242,7 @@ class SenseCapSoilSensor(LoRaSensor):
             print('sensecap soil temperature set to {}'.format(temperature))
 
     def get_timeseries_definitions(self):
-        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'moisture']]
+        return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['temperature', 'moisture']]
 
 #########################################################################
 ### DRAGINO SOIL MOISTURE SENSOR (includes temp & conductivity too)   ###
@@ -275,7 +275,7 @@ class DraginoSoilSensor(LoRaSensor):
         print('dragino soil conductivity set to {}'.format(conductivity))
 
     def get_timeseries_definitions(self):
-        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'moisture', 'conductivity']]
+        return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['temperature', 'moisture', 'conductivity']]
 
 # NOTE $BSHARP commenting this out for now - in the homeassistant driver I added this so Amy could see the raw hex string of the payload
 # coming in from the dev board. But the device manager doesn't love string-valued timeseries (it's really only setup for scalar numeric ones right now)
