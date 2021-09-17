@@ -189,8 +189,8 @@ class DeviceManager(object):
         if self.diagnostic_mode:
             print('refresh_access_token_from_server called')
 
-        if self.local_sim:
-            return
+        #if self.local_sim:
+        #    return
 
         request_url = self.access_token_request_url
         offline_refresh_token = self.offline_refresh_token
@@ -198,7 +198,11 @@ class DeviceManager(object):
         parameters = {'client_id': 'brain', 'grant_type': 'refresh_token', 'refresh_token': offline_refresh_token}
         while access_token is None:
             try:
-                r = requests.get(request_url, params=parameters)
+                r = requests.post(request_url, data=parameters)
+                if self.diagnostic_mode:
+                    print ('requested refresh token, content:')
+                    print (r.content)
+                    
                 r.raise_for_status()
 
                 # There's other stuff in the response like 'expires_in' for how many seconds this is valid and stuff
@@ -252,8 +256,8 @@ class DeviceManager(object):
                 print('    id: {}, name "{}", data type "{}", decimal places "{}"'.format(a[0], a[1], a[2], a[3]))
             print('======================================================')
 
-        if self.local_sim:
-            return
+        #if self.local_sim:
+        #    return
 
         server_name = self.server_path
         url = 'http://' + server_name + '/api/v1/seedbank/timeseries/create'
@@ -272,8 +276,8 @@ class DeviceManager(object):
 
     # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
     def record_timeseries_values_and_maybe_push_to_server(self, values):
-        if self.local_sim:
-            return
+        #if self.local_sim:
+        #    return
 
         server_name = self.server_path
         url = 'http://' + server_name + '/api/v1/seedbank/timeseries/values'
@@ -302,7 +306,7 @@ class DeviceManager(object):
                     gevent.sleep(10)
 
 
-    def request_and_retry_on_token_expiration(request_lambda):
+    def request_and_retry_on_token_expiration(self, request_lambda):
         # To be really robust this should probably timeout after some period to make sure the other greenlets
         # get to run, but that also means gracefully handling just utterly failed attempts to talk to the server
         # which will certainly happen if the internet goes down, but so for now, just hang here and keep going in case
