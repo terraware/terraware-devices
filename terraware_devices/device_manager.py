@@ -58,11 +58,12 @@ class DeviceManager(object):
         self.devices = []
         self.start_time = None
 
-        self.local_sim_file = os.environ.get('LOCAL_SIM_CONFIG_FILE', None)
-        self.local_sim = self.local_sim_file != None
+        self.local_config_file = os.environ.get('LOCAL_CONFIG_FILE_OVERRIDE', None)
+        self.local_sim = os.environ.get('LOCAL_SIM', False)
 
         self.server_path = os.environ.get('SERVER')
 
+        self.api_client_id = os.environ.get('KEYCLOAK_API_CLIENT_ID')
         self.offline_refresh_token = os.environ.get('OFFLINE_REFRESH_TOKEN')
         self.access_token_request_url = os.environ.get('ACCESS_TOKEN_REQUEST_URL')
         self.refresh_access_token_from_server()
@@ -179,9 +180,15 @@ class DeviceManager(object):
         device_infos = self.query_config_from_server(self.facilities)
 
         count_added = self.create_devices(device_infos)
-        print('loaded %d devices from %s' % (count_added, self.local_sim_file if self.local_sim else self.server_path))
+        print('loaded %d devices from %s' % (count_added, self.local_config_file if self.local_config_file else self.server_path))
 
     # APIs for communicating with the terraware-server.
+
+    def abbreviate_string(self, thing_to_stringify, prefix, suffix):
+        long_str = '{}'.format(thing_to_stringify)
+        if len(long_str) > prefix+suffix:
+            long_str = '{}...{}'.format(long_str[0:prefix], long_str[-suffix:])
+        return long_str
 
     # We use expiring access tokens for server access, and need to periodically request a new one; this is how you do that.
     # Called immediately on startup and then anytime a query fails
@@ -189,19 +196,15 @@ class DeviceManager(object):
         if self.diagnostic_mode:
             print('refresh_access_token_from_server called')
 
-        #if self.local_sim:
-        #    return
+        if self.local_sim:
+            return
 
         request_url = self.access_token_request_url
-        offline_refresh_token = self.offline_refresh_token
         access_token = None
-        parameters = {'client_id': 'brain', 'grant_type': 'refresh_token', 'refresh_token': offline_refresh_token}
+        parameters = {'client_id': self.api_client_id, 'grant_type': 'refresh_token', 'refresh_token': self.offline_refresh_token}
         while access_token is None:
             try:
                 r = requests.post(request_url, data=parameters)
-                if self.diagnostic_mode:
-                    print ('requested refresh token, content:')
-                    print (r.content)
                     
                 r.raise_for_status()
 
@@ -210,8 +213,10 @@ class DeviceManager(object):
                 # is nearing to avoid serialized interruptions and maybe save a failed roundtrip or two.
                 json = r.json()
                 access_token = '{} {}'.format(json['token_type'], json['access_token'])
-                self.auth_header = CaseInsensitiveDict()
-                self.auth_header["Authorization"] = access_token
+                self.auth_header = {"Authorization": access_token}
+
+                if self.diagnostic_mode:
+                    print('    Success, auth_header is [{}...]'.format(self.abbreviate_string(self.auth_header, 30, 20)))
             except Exception as ex:
                 print('error requesting access token from server {}: {}'.format(request_url, ex))
                 gevent.sleep(10)
@@ -220,9 +225,9 @@ class DeviceManager(object):
         if self.diagnostic_mode:
             print('query_config_from_server called for facilities {}'.format(facility_ids))
 
-        if self.local_sim:
-            print('reading device manager config from local sim file {}'.format(self.local_sim_file))
-            with open(self.local_sim_file) as json_file:
+        if self.local_config_file:
+            print('reading device manager config from local config file {}'.format(self.local_config_file))
+            with open(self.local_config_file) as json_file:
                 site_info = json.loads(json_file.read())
                 return site_info['devices']
 
@@ -236,7 +241,7 @@ class DeviceManager(object):
             got_facility_devices = False
             while not got_facility_devices:
                 try:
-                    r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.get(url.format(facility_id), headers=auth_header))
+                    r = self.request_and_retry_on_token_expiration(requests.get, url.format(facility_id))
                     r.raise_for_status()
 
                     if self.diagnostic_mode:
@@ -256,8 +261,8 @@ class DeviceManager(object):
                 print('    id: {}, name "{}", data type "{}", decimal places "{}"'.format(a[0], a[1], a[2], a[3]))
             print('======================================================')
 
-        #if self.local_sim:
-        #    return
+        if self.local_sim:
+            return
 
         server_name = self.server_path
         url = 'http://' + server_name + '/api/v1/seedbank/timeseries/create'
@@ -267,7 +272,7 @@ class DeviceManager(object):
         success = False
         while not success:
             try:
-                r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.post(url, headers=auth_header, json=timeseries_definitions))
+                r = self.request_and_retry_on_token_expiration(requests.post, url, timeseries_definitions)
                 r.raise_for_status()
                 success = True
             except Exception as ex:
@@ -276,8 +281,8 @@ class DeviceManager(object):
 
     # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
     def record_timeseries_values_and_maybe_push_to_server(self, values):
-        #if self.local_sim:
-        #    return
+        if self.local_sim:
+            return
 
         server_name = self.server_path
         url = 'http://' + server_name + '/api/v1/seedbank/timeseries/values'
@@ -297,7 +302,7 @@ class DeviceManager(object):
             success = False
             while not success:
                 try:
-                    r = self.request_and_retry_on_token_expiration(lambda auth_header: requests.post(url, headers=auth_header, json=self.timeseries_values_to_send.items()))
+                    r = self.request_and_retry_on_token_expiration(requests.post, url, self.timeseries_values_to_send.items())
                     r.raise_for_status()
                     success = True
                     self.timeseries_values_to_send = defaultdict(list)
@@ -306,7 +311,7 @@ class DeviceManager(object):
                     gevent.sleep(10)
 
 
-    def request_and_retry_on_token_expiration(self, request_lambda):
+    def request_and_retry_on_token_expiration(self, request_func, url, json_payload=None):
         # To be really robust this should probably timeout after some period to make sure the other greenlets
         # get to run, but that also means gracefully handling just utterly failed attempts to talk to the server
         # which will certainly happen if the internet goes down, but so for now, just hang here and keep going in case
@@ -321,11 +326,22 @@ class DeviceManager(object):
         # This - https://stackoverflow.com/questions/2295290/what-do-lambda-function-closures-capture - makes
         # it sound like it's captured by reference and it would work to capture self.auth_header, but I think it
         # makes the code more legible to pass it as an arg so I'm leaving it this way.
+        if self.diagnostic_mode:
+            print('*** request_and_retry_on_token_expiration ***')
         while True:
-            r = request_lambda(self.auth_header)
+            if self.diagnostic_mode:
+                print('Submitting request [{}, {}] with auth header [{}]'.format(request_func, url, self.abbreviate_string(self.auth_header, 30, 20)))
+            r = request_func(url, headers=self.auth_header, json=json_payload)
+            if self.diagnostic_mode:
+                print('    Request sent: status {}, content {}'.format(r.status_code, r.content))
             if (r.status_code == 401):
+                if self.diagnostic_mode:
+                    print('    Expired token for request [{}], refreshing...'.format(r.request))
                 self.refresh_access_token_from_server()
             else:
+                if self.diagnostic_mode:
+                    print('    Success, returning result')
+                    print('**************************************************')
                 return r
 
     # This is sort of a glorified dictionary lookup, and it could be extracted out of this file and

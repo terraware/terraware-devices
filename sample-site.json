@@ -7,7 +7,10 @@
       "make": "FakeUPSBrand",
       "model": "FakeUPS9000",
       "pollingInterval": 5,
-      "settings": {}
+      "settings":
+      {
+        "local_sim": true
+      }
     },
     {
       "id": 1001,
@@ -16,7 +19,10 @@
       "make": "Raspberry Pi",
       "model": "4b",
       "pollingInterval": 5,
-      "settings": {}
+      "settings":
+      {
+        "local_sim": true
+      }
     },
     {
       "id": 1002,
@@ -28,7 +34,8 @@
       "pollingInterval": 5,
       "settings": 
       {
-        "password": "FakeRouterPassword"
+        "password": "FakeRouterPassword",
+        "local_sim": true
       }
     },
     {
@@ -39,7 +46,11 @@
       "model": "WebRelay",
       "address": "123.45.67.89",
       "pollingInterval": 5,
-      "port": 12345
+      "port": 12345,
+      "settings":
+      {
+        "local_sim": true
+      }
     },
     {
       "id": 1004,
@@ -48,7 +59,11 @@
       "parentId": 1006,
       "make": "OmniSense",
       "model": "S-11",
-      "address": "2933027B"
+      "address": "2933027B",
+      "settings":
+      {
+        "local_sim": true
+      }
     },
     {
       "id": 1005,
@@ -57,7 +72,11 @@
       "parentId": 1006,
       "make": "OmniSense",
       "model": "S-11",
-      "address": "293303AC"
+      "address": "293303AC",
+      "settings":
+      {
+        "local_sim": true
+      }
     },
     {
       "id": 1006,
@@ -80,7 +99,8 @@
       {
         "rtu-over-tcp": true,
         "holding": false,
-        "unit": 1
+        "unit": 1,
+        "local_sim": true
       }
     },
     {
@@ -91,7 +111,11 @@
       "model": "Soil Moisture",
       "address": "2cf7f12121000107",
       "pollingInterval": 5,
-      "parentId": 1010
+      "parentId": 1010,
+      "settings":
+      {
+        "local_sim": true
+      }
     },
     {
       "id": 1009,
@@ -101,7 +125,11 @@
       "model": "LSE01",
       "address": "a84041e7b182a733",
       "pollingInterval": 5,
-      "parentId": 1010
+      "parentId": 1010,
+      "settings":
+      {
+        "local_sim": true
+      }
     },
     {
       "id": 1010,
@@ -114,7 +142,8 @@
       "settings":
       {
         "applicationId": 1,
-        "apiToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        "apiToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "local_sim": true
       }
     },
     {
@@ -126,7 +155,8 @@
       "pollingInterval": 5,
       "settings":
       {
-        "unitSystem": "metric"
+        "unitSystem": "metric",
+        "local_sim": false
       }
     }
   ]

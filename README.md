@@ -16,9 +16,10 @@ This version of the README is heavily about the state I (Brian Sharp) am leaving
 
 ## Configuration
 
-To run in local sim mode, where the config is loaded from a JSON file and all devices generate spoofed data and don't try to talk to real hardware, set:
+Various local simulation options:
 
-*	`LOCAL_SIM_CONFIG_FILE`: The filename, relative to the root of the project, to load. If you uncomment the line in the Dockerfile that copies sample-site.json over to the Pi, set this environment variable to `sample-site.json` - that file will be in the working directory for the devices service on the Pi.
+*	`LOCAL_CONFIG_FILE_OVERRIDE`: The filename, relative to the root of the project, to load. If you uncomment the line in the Dockerfile that copies sample-site.json over to the Pi, set this environment variable to `sample-site.json` - that file will be in the working directory for the devices service on the Pi. This will disable querying the config from the server, but it will *not* disable all other server interactions - the device manager will still query API tokens from Keycloak and send timeseries and timeseries values to the server. This is helpful for locally testing if you don't have a config populated in a database but you want to test all the other server interactions.
+*	`LOCAL_SIM`: If set to true, the device manager will not contact the server at all for anything. Also, this setting is applied by default to all devices - so if it's set to True, by default all devices will run in a local simulation mode, too, where they will return fake data and not try to talk to real hardware. This can be overridden on a device-by-device basis by putting "local_sim":false in their "settings" json block in their config.
 
 The following envvars are relevant whether running in local sim mode or production mode:
 

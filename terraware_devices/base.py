@@ -29,7 +29,15 @@ class TerrawareDevice(ABC):
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         self._id = dev_info["id"]
         self._name = dev_info["name"]
+        
+        # By default we use the global local_sim setting, but they can override it either way in the device's settings itself.
         self._local_sim = local_sim
+        settings_items = dev_info.get("settings")
+        if settings_items:
+            local_sim_override = settings_items.get("local_sim")
+            if local_sim_override is not None:
+                self._local_sim = local_sim_override
+
         self._diagnostic_mode = diagnostic_mode
         self._parent_id = dev_info.get("parentId")
 
