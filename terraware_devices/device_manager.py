@@ -77,7 +77,7 @@ class DeviceManager(object):
 
         self.load_config_from_server(self.facilities)
 
-        self.timeseries_values_to_send = {}
+        self.timeseries_values_to_send = []
 
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
@@ -301,15 +301,26 @@ class DeviceManager(object):
         TIME_FORMAT='%Y-%m-%d %H:%M:%S'
         ts = int(time.time()) # UTC timestamp
         timestamp = datetime.datetime.fromtimestamp(ts, timezone.utc).strftime(TIME_FORMAT)
-        d1 = datetime.datetime.strptime(timestamp + "+0000", TIME_FORMAT + '%z')
-        ts1 = d1.timestamp()
 
         # The server-side API takes a dictionary 
-        for key in values.keys():
-            value = values[key]
-            if key not in self.timeseries_values_to_send:
-                self.timeseries_values_to_send[key] = []
-            self.timeseries_values_to_send[key].append([timestamp, str(value)])
+        for key_tuple, scalar_value in values.items():
+            found = False
+            for entry in self.timeseries_values_to_send:
+                if entry['deviceId'] == key_tuple[0] and entry['timeseriesName'] == key_tuple[1]:
+                    entry['values'].append({
+                        'timestamp': timestamp,
+                        'value': str(scalar_value)
+                    })
+                    found = True
+            if not found:
+                self.timeseries_values_to_send.append({
+                    'deviceId': key_tuple[0],
+                    'timeseriesName': key_tuple[1],
+                    'values': [{
+                        'timestamp': timestamp,
+                        'value': str(scalar_value)
+                    }]
+                })
 
         # This can turn into a "see if enough time has passed to batch up a bunch of these" but for testing I'm just
         # sending immediately always.
@@ -317,22 +328,13 @@ class DeviceManager(object):
             success = False
             while not success:
                 try:
-                    # iterating over a dictionary whose key is a tuple seems pretty squirrely - if you do for key, value in dict
-                    # the key and value are just individual parts of the tuple - weird.
-                    timeseries_values_list = []
-                    for key in self.timeseries_values_to_send.keys():
-                        # key is a 2-tuple of (device id, timeseries name).
-                        # value is a list of scalar samples.
-                        value = self.timeseries_values_to_send[key]
-                        if len(value) > 0:
-                            timeseries_values_list.append([key[0], key[1], value])
-                    if len(timeseries_values_list) > 0:
+                    if len(self.timeseries_values_to_send) > 0:
                         if self.diagnostic_mode:
-                            print('Sending {} timeseries values to server'.format(len(timeseries_values_list)))
-                        r = self.request_and_retry_on_token_expiration(requests.post, url, timeseries_values_list)
+                            print('Sending {} timeseries values to server'.format(self.timeseries_values_to_send))
+                        r = self.request_and_retry_on_token_expiration(requests.post, url, self.timeseries_values_to_send)
                         r.raise_for_status()
                     success = True
-                    self.timeseries_values_to_send = {}
+                    self.timeseries_values_to_send = []
                 except Exception as ex:
                     print('error sending timeseries values to server %s: %s' % (server_name, ex))
                     gevent.sleep(10)
