@@ -28,6 +28,7 @@ The following envvars are relevant whether running in local sim mode or producti
 And these variables must be set to run with a connection to terraware-server for querying config data and for uploading timeseries data:
 
 *   `OFFLINE_REFRESH_TOKEN`: The [Keycloak token used to request expiring API keys](https://terraformation.atlassian.net/wiki/spaces/FT/pages/330661907/API+keys+for+brains).
+*   `KEYCLOAK_API_CLIENT_ID`: Set this to `api` for now (see above doc page).
 *   `ACCESS_TOKEN_REQUEST_URL`: The full URL (including server and rest query string) for requesting the expiring access token (see above link.)
 *   `SERVER`: The server address, e.g. 'https://localhost:4000/' for the terraware-server instance to load config from & push timeseries data to.
 *   `FACILITIES`: The list of facility IDs this device manager instance represents. Should be just a comma-delimited list of ints, e.g. `1,3,18`
