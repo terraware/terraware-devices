@@ -6,23 +6,11 @@ RUN apt-get update \
         curl \
         g++ \
         gcc \
-        libbluetooth-dev \
         libglib2.0-0 \
-        libusb-1.0-0-dev \
         make \
         pkg-config \
         wget \
         xz-utils
-
-WORKDIR /tmp
-RUN curl -Ls https://github.com/greatscottgadgets/libbtbb/archive/2020-12-R1.tar.gz | tar xfz -
-WORKDIR /tmp/libbtbb-2020-12-R1/build
-RUN cmake .. && make install && ldconfig
-
-WORKDIR /tmp
-RUN curl -Ls https://github.com/greatscottgadgets/ubertooth/releases/download/2020-12-R1/ubertooth-2020-12-R1.tar.xz | tar xfJ -
-WORKDIR /tmp/ubertooth-2020-12-R1/host/build
-RUN cmake .. && make install && ldconfig
 
 WORKDIR /app
 
@@ -39,19 +27,16 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y \
-        libbluetooth3 \
         libglib2.0-0 \
-        libusb-1.0.0 \
         ssh \
         udev \
         nut \
     && apt-get clean \
     && rm -rf /var/cache/apt/lists
 
-COPY --from=build /etc/udev/rules.d/40-ubertooth.rules /etc/udev/rules.d/40-ubertooth.rules
 COPY --from=build /app/entry.sh /app/entry.sh
 
-# /usr/local contains Python libraries as well as Ubertooth commands and libraries.
+# /usr/local contains Python libraries
 COPY --from=build /usr/local /usr/local
 RUN ldconfig
 
