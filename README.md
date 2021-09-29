@@ -52,3 +52,18 @@ As of this writing, here's an exhaustive list of the parameters and what they're
 The `parentId` parameter in a device's configuration causes it to get bound to that device as a child (the hub device gets `add_device` called with the child device after the first construction pass.) Hubs then get a `notify_all_devices_added` when all their children are added to give them a chance to do stuff (ChirpStack and OmniSense wait for this to spawn their listening services so they don't throw away data for child sensors they haven't heard about yet.) Probably this is overkill since it's probably only a nanosecond between the hub's construction and when all its child devices are added, but that might change in the future if devices block on construction for some reason, so this seemed like the right move.
 
 For hub/child relationships, right now the code is a little inconsistent: For OmniSense, the hub's `poll` returns all the timeseries values for all the child sensors, and so the hub device needs a valid `pollingInterval` value in its config, and the child sensors shouldn't be polled at all, but for ChirpStack, based on how the driver code was written (originally for homeassistant and I ported it over to the device manager) it was easier to have the child sensors return their data instead. There's no fundamental need to standardize one way or the other, but the inconsistency is bothersome. On the upside, it should be fine to just set all devices to be polled and some just never return any data.
+
+## Balena Deployment
+
+1.  If needed, create a new fleet and a new device.
+2.  Set the static IP to `192.168.2.2` as described here: https://github.com/terraware/balena/tree/main/static-ip
+3.  For local development, set the device to local mode and run `balena push [ip address]` where `[ip address]` is
+    the Pi's local IP address (which you can obtain from the Balena web interface).
+4.  Set these variables at the fleet level:
+    *   `SERVER`
+    *   `ACCESS_TOKEN_REQUEST_URL`
+    *   `KEYCLOAK_API_CLIENT_ID`
+5.  Set these variables at the device level:
+    *   `OFFLINE_REFRESH_TOKEN`
+    *   `FACILITIES`
+    *   `DIAGNOSTIC_MODE`
