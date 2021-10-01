@@ -75,10 +75,6 @@ class DeviceManager(object):
         if self.diagnostic_mode:
             print ('Device Manager starting up with server {} for facilities {}'.format(self.server_path, self.facilities))
 
-        device_infos = self.load_device_config()
-        count_added = self.create_devices(device_infos)
-        print('loaded %d devices from %s' % (count_added, self.local_config_file if self.local_config_file else self.server_path))
-
         self.timeseries_values_to_send = []
 
     # add/initialize devices using a list of dictionaries of device info
@@ -138,7 +134,7 @@ class DeviceManager(object):
                 print(e)
                 values = {}
 
-            self.record_timeseries_values_and_maybe_push_to_server(values)
+            self.record_timeseries_values(values)
 
             if self.diagnostic_mode:
                 print('=== DEVICE POLLING LOOP [{}] - {} values received: ==='.format(device.name, len(values)))
@@ -156,13 +152,15 @@ class DeviceManager(object):
             if device.polling_interval:
                 device.greenlet = gevent.spawn(self.device_polling_loop, device)
                 device_polling_greenlet_count += 1
-        print('launched %d greenlet(s) for device & hub polling' % device_polling_greenlet_count)
+        print('launched %d greenlet(s) for device and hub polling' % device_polling_greenlet_count)
         self.start_time = time.time()
 
         # note $bsharp: I assume I can't return from run() or the device manager will just fully exit,
         # not sure the best way to just say "Now just run the greenlets".
         while True:
-            gevent.sleep(10)
+            print('sending values')
+            self.send_timeseries_values_to_server()
+            gevent.sleep(5)
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
     def watchdog_update(self):
@@ -226,7 +224,7 @@ class DeviceManager(object):
         
         # All this is doing is "Ask the server for each facility's device list and combine them and return them" but all
         # the error handling makes it look rather complicated.
-        device_infos = {}
+        device_infos = []
         for facility_id in self.facilities:
             got_facility_devices = False
             while not got_facility_devices:
@@ -236,13 +234,27 @@ class DeviceManager(object):
 
                     if self.diagnostic_mode:
                         print('Received the following devices from server for facility id {}:'.format(facility_id))
-                    device_infos.update(r.json()['devices'])
+                    device_infos += r.json()['devices']
                     got_facility_devices = True
                 except Exception as ex:
                     print('error requesting devices from server %s: %s' % (server_name, ex))
                     gevent.sleep(10)
 
+        print('loaded %d devices from %s' % (len(device_infos), self.local_config_file if self.local_config_file else self.server_path))
+
         return device_infos
+
+    def send_device_definition_to_server(self, device_info):
+        server_name = self.server_path
+        url = server_name + 'api/v1/devices'
+        upload_device_info = device_info.copy()
+        del upload_device_info['id']  # ID will be assigned by server
+        upload_device_info['facilityId'] = self.facilities[0]  # use first facility in list
+        print('sending device info for device %d' % device_info['id'])
+        print(upload_device_info)
+        r = self.send_request(requests.post, url, upload_device_info)
+        r.raise_for_status()
+        return r.json()['id']  # return ID assigned by server
 
     def send_timeseries_definitions_to_server(self, timeseries_definitions):
         if self.diagnostic_mode:
@@ -279,17 +291,12 @@ class DeviceManager(object):
                 gevent.sleep(10)
 
     # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
-    def record_timeseries_values_and_maybe_push_to_server(self, values):
+    def record_timeseries_values(self, values):
         if self.local_sim:
             return
-
-        server_name = self.server_path
-        url = server_name + 'api/v1/seedbank/timeseries/values'
         
-        # From: https://stackoverflow.com/questions/53643007/converting-python-utc-timestamp-to-and-from-string/53643327
-        TIME_FORMAT='%Y-%m-%d %H:%M:%S'
         ts = int(time.time()) # UTC timestamp
-        timestamp = datetime.datetime.fromtimestamp(ts, timezone.utc).strftime(TIME_FORMAT)
+        timestamp = datetime.datetime.fromtimestamp(ts, timezone.utc).isoformat()
 
         # The server-side API takes a dictionary 
         for key_tuple, scalar_value in values.items():
@@ -311,22 +318,34 @@ class DeviceManager(object):
                     }]
                 })
 
-        # This can turn into a "see if enough time has passed to batch up a bunch of these" but for testing I'm just
-        # sending immediately always.
-        if True:
-            success = False
-            while not success:
-                try:
-                    if len(self.timeseries_values_to_send) > 0:
-                        if self.diagnostic_mode:
-                            print('Sending {} timeseries values to server'.format(self.timeseries_values_to_send))
-                        r = self.send_request(requests.post, url, self.timeseries_values_to_send)
-                        r.raise_for_status()
-                    success = True
-                    self.timeseries_values_to_send = []
-                except Exception as ex:
-                    print('error sending timeseries values to server %s: %s' % (server_name, ex))
-                    gevent.sleep(10)
+    def send_timeseries_values_to_server(self):
+        server_name = self.server_path
+        url = server_name + 'api/v1/seedbank/timeseries/values'
+        if len(self.timeseries_values_to_send) > 0:
+            values_to_send = self.timeseries_values_to_send.copy()
+            self.timeseries_values_to_send = []  # assuming this is atomic with line above
+            payload = {
+                'timeseries': values_to_send
+            }
+            if self.diagnostic_mode:
+                print('Sending {} timeseries values to server'.format(payload))
+            try:
+                r = self.send_request(requests.post, url, payload)
+                r.raise_for_status()
+                response = r.json()
+            except Exception as ex:
+                print('error sending timeseries values to server %s: %s' % (server_name, ex))
+                self.timeseries_values_to_send += values_to_send  # we'll try again later
+                return
+            if response['status'] == 'error':
+                failures = response['failures']
+                print('failed updates:')
+                for failed_update in failures:
+                    print('    device: %d, time series: %s' % (failed_update['deviceId'], failed_update['timeseriesName']))
+                fail_count = len(failures)
+            else:
+                fail_count = 0
+            print('sent %d updates; had %d failures' % (len(values_to_send), fail_count))
 
     # send a request to the server and retry if expired token
     def send_request(self, request_func, url, json_payload=None):
