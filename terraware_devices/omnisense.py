@@ -25,6 +25,7 @@ class OmniSenseHub(TerrawareHub):
         hub_instance = self
         self.recent_sensor_data = {}
         self.address = None
+        self.unknown_device_log = None
 
     def notify_all_devices_added(self):
         if self._local_sim:
@@ -57,6 +58,10 @@ class OmniSenseHub(TerrawareHub):
                     self.recent_sensor_data[(device.id, 'humidity'   )] = humidity
                 else:
                     print('data from unknown omnisense device: %s' % sensor_id)
+                    if not self.unknown_device_log:
+                        self.unknown_device_log = open('omni-devices.txt', 'w')
+                    self.unknown_device_log.write('%s\n' % sensor_id)
+                    self.unknown_device_log.flush()
 
     def poll(self):
         result = self.recent_sensor_data
