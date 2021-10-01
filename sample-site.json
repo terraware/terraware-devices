@@ -83,6 +83,7 @@
       "name": "FakeOmniSenseHub",
       "type": "hub",
       "make": "OmniSense",
+      "model": "G-4",
       "pollingInterval": 5
     },
     {
