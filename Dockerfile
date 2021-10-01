@@ -50,5 +50,14 @@ COPY ups.conf nut.conf /etc/nut/
 #COPY sample_local.yaml /app/local.yaml
 #COPY sample-site.json /app/sample-site.json
 
+# Uncomment and set these for local mode development within Balena (which doesn't use the variables specified in the web interface)
+#ENV LOCAL_CONFIG_FILE_OVERRIDE=sample-site.json
+#ENV KEYCLOAK_API_CLIENT_ID=api
+#ENV DIAGNOSTIC_MODE=1
+#ENV OFFLINE_REFRESH_TOKEN=
+#ENV ACCESS_TOKEN_REQUEST_URL=
+#ENV SERVER=
+#ENV FACILITIES=1,2,3
+
 ENTRYPOINT ["/bin/bash", "/app/entry.sh"]
 CMD ["/usr/local/bin/python3", "main.py"]
