@@ -69,7 +69,7 @@ class InHandRouterDevice(TerrawareDevice):
     def poll(self):
         if self._local_sim:
             values = {
-                (self.id, 'signal_stength'): 18
+                (self.id, 'signal_strength'): 18
             }
         else:
             values = poll_router(self.id, self._address, self._username, self._password)
