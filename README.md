@@ -55,15 +55,27 @@ For hub/child relationships, right now the code is a little inconsistent: For Om
 
 ## Balena Deployment
 
+General setup:
+
 1.  If needed, create a new fleet and a new device.
-2.  Set the static IP to `192.168.2.2` as described here: https://github.com/terraware/balena/tree/main/static-ip
-3.  For local development, set the device to local mode and run `balena push [ip address]` where `[ip address]` is
+2.  Set the device's static IP to `192.168.2.2` as described here: https://github.com/terraware/balena/tree/main/static-ip
+3.  If needed, install the Balena console and run `balena login`
+
+For local development:
+
+1.  Set the device to local mode in the Balena web interface.
+2.  Set the environment variables as needed in the `Dockerfile`; be sure not to check in this file!
+3.  Run `balena push [ip address]` where `[ip address]` is
     the Pi's local IP address (which you can obtain from the Balena web interface).
-4.  Set these variables at the fleet level:
+
+For deployments to the production fleet:
+
+1.  Set these variables at the fleet level:
     *   `SERVER`
     *   `ACCESS_TOKEN_REQUEST_URL`
     *   `KEYCLOAK_API_CLIENT_ID`
-5.  Set these variables at the device level:
+2.  Set these variables at the device level:
     *   `OFFLINE_REFRESH_TOKEN`
     *   `FACILITIES`
     *   `DIAGNOSTIC_MODE`
+3.  Run `balena push -m device-manager`
