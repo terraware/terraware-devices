@@ -57,6 +57,7 @@ class DeviceManager(object):
         self.diagnostic_mode = os.environ.get('DIAGNOSTIC_MODE', False)
 
         self.devices = []
+        self.timeseries_values_to_send = []
         self.start_time = None
 
         self.local_config_file = os.environ.get('LOCAL_CONFIG_FILE_OVERRIDE', None)
@@ -67,15 +68,16 @@ class DeviceManager(object):
         self.api_client_id = os.environ.get('KEYCLOAK_API_CLIENT_ID')
         self.offline_refresh_token = os.environ.get('OFFLINE_REFRESH_TOKEN')
         self.access_token_request_url = os.environ.get('ACCESS_TOKEN_REQUEST_URL')
-        self.refresh_access_token_from_server()
 
         facilities_string = os.environ.get('FACILITIES', None)
         self.facilities = [int(a) for a in facilities_string.split(',')] if facilities_string else []
-    
-        if self.diagnostic_mode:
-            print ('Device Manager starting up with server {} for facilities {}'.format(self.server_path, self.facilities))
 
-        self.timeseries_values_to_send = []
+        print('*' * 70)
+        now_str = datetime.datetime.now().isoformat()
+        print ('Device Manager starting at {} with server {} for facilities {}'.format(now_str, self.server_path, self.facilities))
+
+        self.refresh_access_token_from_server()
+
 
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
@@ -160,7 +162,7 @@ class DeviceManager(object):
         while True:
             print('sending values')
             self.send_timeseries_values_to_server()
-            gevent.sleep(5)
+            gevent.sleep(20)
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
     def watchdog_update(self):
@@ -207,7 +209,7 @@ class DeviceManager(object):
                     print('    Success, auth_header is [{}...]'.format(abbreviate_string(self.auth_header, 30, 20)))
             except Exception as ex:
                 print('error requesting access token from server {}: {}'.format(request_url, ex))
-                gevent.sleep(10)
+                gevent.sleep(120)
 
     def load_device_config(self):
         if self.diagnostic_mode:
@@ -238,7 +240,7 @@ class DeviceManager(object):
                     got_facility_devices = True
                 except Exception as ex:
                     print('error requesting devices from server %s: %s' % (server_name, ex))
-                    gevent.sleep(10)
+                    gevent.sleep(120)
 
         print('loaded %d devices from %s' % (len(device_infos), self.local_config_file if self.local_config_file else self.server_path))
 
@@ -288,7 +290,10 @@ class DeviceManager(object):
                 success = True
             except Exception as ex:
                 print('error sending timeseries definitions to server %s: %s' % (server_name, ex))
-                gevent.sleep(10)
+                print('---- payload ----')
+                print(payload)  # some debug printing
+                print('---- end payload ----')
+                gevent.sleep(120)
 
     # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
     def record_timeseries_values(self, values):
