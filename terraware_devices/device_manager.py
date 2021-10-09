@@ -156,13 +156,9 @@ class DeviceManager(object):
                 device_polling_greenlet_count += 1
         print('launched %d greenlet(s) for device and hub polling' % device_polling_greenlet_count)
         self.start_time = time.time()
-
-        # note $bsharp: I assume I can't return from run() or the device manager will just fully exit,
-        # not sure the best way to just say "Now just run the greenlets".
         while True:
-            print('sending values')
             self.send_timeseries_values_to_server()
-            gevent.sleep(20)
+            gevent.sleep(120)
 
     # check on devices; restart them as needed; if all is good, send watchdog message to server
     def watchdog_update(self):
@@ -333,7 +329,7 @@ class DeviceManager(object):
                 'timeseries': values_to_send
             }
             if self.diagnostic_mode:
-                print('Sending {} timeseries values to server'.format(payload))
+                print('Sending {} timeseries values to server'.format(len(payload)))
             try:
                 r = self.send_request(requests.post, url, payload)
                 r.raise_for_status()
@@ -402,8 +398,8 @@ class DeviceManager(object):
             return NutUpsDevice
         elif dev_type == 'server' and make == 'Raspberry Pi':
             return RasPiDevice
-        elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
-            return InHandRouterDevice
+#        elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
+#            return InHandRouterDevice
         elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
             return CBWRelayDevice
         elif dev_type == 'sensor' and make == 'OmniSense' and model == 'S-11':
