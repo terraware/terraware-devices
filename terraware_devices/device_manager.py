@@ -243,16 +243,27 @@ class DeviceManager(object):
         return device_infos
 
     def send_device_definition_to_server(self, device_info):
+        assert not 'id' in device_info
         server_name = self.server_path
         url = server_name + 'api/v1/devices'
         upload_device_info = device_info.copy()
-        del upload_device_info['id']  # ID will be assigned by server
         upload_device_info['facilityId'] = self.facilities[0]  # use first facility in list
-        print('sending device info for device %d' % device_info['id'])
+        print('creating device with type %s' % device_info['type'])
         print(upload_device_info)
         r = self.send_request(requests.post, url, upload_device_info)
         r.raise_for_status()
         return r.json()['id']  # return ID assigned by server
+
+    def update_device_definition_on_server(self, device_info):
+        assert 'id' in device_info
+        server_name = self.server_path
+        url = server_name + 'api/v1/devices/%s' % device_info['id']
+        upload_device_info = device_info.copy()
+        del upload_device_info['id']  # ID goes in URL, not payload
+        print('updating device info for device %d' % device_info['id'])
+        print(upload_device_info)
+        r = self.send_request(requests.put, url, upload_device_info)
+        r.raise_for_status()
 
     def send_timeseries_definitions_to_server(self, timeseries_definitions):
         if self.diagnostic_mode:
@@ -346,7 +357,8 @@ class DeviceManager(object):
                 fail_count = len(failures)
             else:
                 fail_count = 0
-            print('sent %d updates; had %d failures' % (len(values_to_send), fail_count))
+            now_str = datetime.datetime.now().strftime('%H:%M:%S')
+            print('%s: sent %d updates; had %d failures' % (now_str, len(values_to_send), fail_count))
 
     # send a request to the server and retry if expired token
     def send_request(self, request_func, url, json_payload=None):
