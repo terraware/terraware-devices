@@ -54,6 +54,8 @@ class ChirpStackUplinkHandler(BaseHTTPRequestHandler):
 class ChirpStackHub(TerrawareHub):
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
+        if self._diagnostic_mode:
+            print('running ChirpStackHub in diagnostic mode')
 
         self.gateway_port = dev_info['port']
         self.gateway_ip = dev_info['address']
@@ -126,6 +128,8 @@ class ChirpStackHub(TerrawareHub):
             gevent.sleep(5)
 
     def process_uplink(self, dev_eui: str, payload: bytes):
+        if self._diagnostic_mode:
+            print('%s: %s' % (dev_eui, payload))
         sensor_address = dev_eui.lower()
         sensor = next((x for x in self.devices if x.address == sensor_address), None)
         if sensor:
