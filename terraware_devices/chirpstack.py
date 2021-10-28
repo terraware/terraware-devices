@@ -11,7 +11,7 @@ import random
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from chirpstack_api.as_pb import integration
-#from google.protobuf.json_format import Parse
+from google.protobuf.json_format import Parse
 
 from .base import TerrawareDevice, TerrawareHub
 
@@ -56,6 +56,10 @@ class ChirpStackHub(TerrawareHub):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         if self._diagnostic_mode:
             print('running ChirpStackHub in diagnostic mode')
+
+        global hub_instance
+        assert hub_instance is None
+        hub_instance = self
 
         self.gateway_port = dev_info['port']
         self.gateway_ip = dev_info['address']
