@@ -22,6 +22,7 @@ class OmniSenseHub(TerrawareHub):
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         global hub_instance
+        assert hub_instance is None
         hub_instance = self
         self.recent_sensor_data = {}
         self.address = None
