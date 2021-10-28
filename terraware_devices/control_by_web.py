@@ -54,6 +54,42 @@ class CBWRelayDevice(TerrawareDevice):
             </datavalues>'''
 
 
+class CBWWeatherStationDevice(TerrawareDevice):
+
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+        self._host = dev_info["address"]
+        self._port = dev_info["port"]
+        self._sim_state = 0
+        self.last_update_time = None
+        self.fields = ['temp', 'humidity', 'windSpd', 'windDir', 'rainTot', 'solarRad', 'barPressure', 'dewPoint']
+        print('created CBW weather station device (%s:%d)' % (self._host, self._port))
+
+    def get_timeseries_definitions(self):
+        return [[self.id, name, 'numeric', 2] for name in self.fields]
+
+    def reconnect(self):
+        pass
+
+    def poll(self):
+        self.last_update_time = time.time()
+        if self._local_sim:
+            xml = self.sample_data()
+        else:
+            r = requests.get('http://%s:%d/state.xml' % (self._host, self._port))
+            xml = r.text
+        tree = ElementTree.fromstring(xml)
+        state = {}
+        for name in self.fields:
+            state[(self.id, name)] = float(tree.find(name).text)
+        if self._diagnostic_mode:
+            print(state)
+        return state
+
+    def sample_data(self):
+        return open('sample-cbw-weather.xml').read()
+
+
 ########################################################################################################
 #### NOTE BSHARP: BROKEN - THIS WAS UNUSED when I took over the device manager. I'm leaving the code here
 #### but it is not included in device_manager, you can't create one of these, and the code has certainly rotten. 

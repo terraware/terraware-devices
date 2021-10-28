@@ -25,7 +25,7 @@ import os
 # other imports
 import requests
 from .base import TerrawareDevice, TerrawareHub
-from .control_by_web import CBWRelayDevice, CBWSensorHub, CBWTemperatureHumidityDevice
+from .control_by_web import CBWRelayDevice, CBWWeatherStationDevice, CBWSensorHub, CBWTemperatureHumidityDevice
 from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
 from .modbus import ModbusDevice
 from .raspi import RasPiDevice
@@ -139,13 +139,13 @@ class DeviceManager(object):
                 print(e)
                 values = {}
 
-            self.record_timeseries_values(values)
-
-            if self.diagnostic_mode:
-                print('=== DEVICE POLLING LOOP [{}] - {} values received: ==='.format(device.name, len(values)))
-                for id_name_pair, value in values.items():
-                    print('    %s: %.2f' % (id_name_pair, value))
-                print('======================================================')
+            if values:
+                self.record_timeseries_values(values)
+                if self.diagnostic_mode:
+                    print('=== DEVICE POLLING LOOP [{}] - {} values received: ==='.format(device.name, len(values)))
+                    for id_name_pair, value in values.items():
+                        print('    %s: %.2f' % (id_name_pair, value))
+                    print('======================================================')
 
             # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
@@ -417,6 +417,8 @@ class DeviceManager(object):
 #            return InHandRouterDevice
         elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
             return CBWRelayDevice
+        elif dev_type == 'weather' and make == 'ControlByWeb' and model == 'X-422':
+            return CBWWeatherStationDevice
         elif dev_type == 'sensor' and make == 'OmniSense' and model == 'S-11':
             return OmniSenseTemperatureHumidityDevice
         elif dev_type == "hub" and make == "OmniSense":
