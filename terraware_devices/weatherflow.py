@@ -50,12 +50,15 @@ class TempestWeatherStation(TerrawareDevice):
             module.registerCallback(self._update_callback)
             module.start()
 
+        if self._diagnostic_mode:
+            print("Running TempestWeatherStation device in diagnostic mode")
+
     def _update_callback(self, data):
         for (a, b) in data:
             if a in SENSOR_TYPES:
                 self._state[(self.id, a)] = b
 
-        if self.diagnostic_mode:
+        if self._diagnostic_mode:
             print("Data received: %s %s %s %s", data.type, data.timestamp, data.precipitation, data.temperature)
 
     def get_timeseries_definitions(self):

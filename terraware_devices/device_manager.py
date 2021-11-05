@@ -279,7 +279,7 @@ class DeviceManager(object):
             return
 
         server_name = self.server_path
-        url = server_name + 'api/v1/seedbank/timeseries/create'
+        url = server_name + 'api/v1/timeseries/create'
 
         create_timeseries_entries = [{
             'deviceId': definition[0],
@@ -335,7 +335,7 @@ class DeviceManager(object):
 
     def send_timeseries_values_to_server(self):
         server_name = self.server_path
-        url = server_name + 'api/v1/seedbank/timeseries/values'
+        url = server_name + 'api/v1/timeseries/values'
         if len(self.timeseries_values_to_send) > 0:
             values_to_send = self.timeseries_values_to_send.copy()
             self.timeseries_values_to_send = []  # assuming this is atomic with line above

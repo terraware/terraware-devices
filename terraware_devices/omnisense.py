@@ -27,6 +27,8 @@ class OmniSenseHub(TerrawareHub):
         self.recent_sensor_data = {}
         self.address = None
         self.unknown_device_log = None
+        if self._diagnostic_mode:
+            print("Running OmniSenseHub device in diagnostic mode")
 
     def notify_all_devices_added(self):
         if self._local_sim:
@@ -45,6 +47,8 @@ class OmniSenseHub(TerrawareHub):
 
     def process_data(self, data):
         data = str(data)
+        if self._diagnostic_mode:
+            print('syslog message: %s' % data)
         # e.g.: <13>May 16 03:39:38 OmniSense sensorReading: 100407E500293303AC000B021900050294B2EE02790000000002785E7F9209
         if 'sensorReading' in data:
             parts = data.split()
