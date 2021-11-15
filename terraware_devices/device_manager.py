@@ -25,6 +25,7 @@ import os
 # other imports
 import requests
 from .base import TerrawareDevice, TerrawareHub
+from .mock import MockSensorDevice
 from .control_by_web import CBWRelayDevice, CBWWeatherStationDevice, CBWSensorHub, CBWTemperatureHumidityDevice
 from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
 from .modbus import ModbusDevice
@@ -61,6 +62,7 @@ class DeviceManager(object):
         self.automations = []
         self.timeseries_values_to_send = []
         self.start_time = None
+        self.last_values = {}  # most recent value for each time series; stored by (device id, series name)
 
         self.local_config_file = os.environ.get('LOCAL_CONFIG_FILE_OVERRIDE', None)
         self.local_sim = os.environ.get('LOCAL_SIM', False)
@@ -147,7 +149,6 @@ class DeviceManager(object):
     # run this function as a greenlet, polling the given device
     def device_polling_loop(self, device):
         while True:
-            # do the polling
             try:
                 values = device.poll()
             except Exception as e:
@@ -166,6 +167,17 @@ class DeviceManager(object):
             # wait until next round of polling
             gevent.sleep(device.polling_interval)  # TODO: need to subtract out poll duration
 
+    # run this function as a greenlet, polling the given automation
+    def automation_polling_loop(self, automation):
+        while True:
+            try:
+                automation.run(self)
+            except Exception as e:
+                print('error running automation {} (facility: {})'.format(automation.name(), automation.facility_id()))
+                print(e)
+                values = {}
+            gevent.sleep(10)
+
     # launch device polling greenlets and run handlers
     def run(self):
         device_polling_greenlet_count = 0
@@ -174,6 +186,8 @@ class DeviceManager(object):
                 device.greenlet = gevent.spawn(self.device_polling_loop, device)
                 device_polling_greenlet_count += 1
         print('launched %d greenlet(s) for device and hub polling' % device_polling_greenlet_count)
+        for automation in self.automations:
+            gevent.spawn(self.automation_polling_loop, automation)
         self.start_time = time.time()
         while True:
             self.send_timeseries_values_to_server()
@@ -193,6 +207,17 @@ class DeviceManager(object):
             # if all devices are updating, send a watchdog message to server
             if devices_ok:
                 self.controller.send_message('watchdog', {})
+
+    def find_device(self, device_id):
+        device = None
+        for d in self.devices:
+            if d.id() == device_id:
+                device = d
+        return device
+
+    # get the last value for a particular time series
+    def last_value(self, device_id, series_name):
+        return self.last_values.get((device_id, series_name))
 
     # APIs for communicating with the terraware-server.
 
@@ -262,8 +287,8 @@ class DeviceManager(object):
         assert not 'id' in device_info
         url = self.server_path + 'api/v1/devices'
         print('creating device with type %s' % device_info['type'])
-        print(automation_info)
-        r = self.send_request(requests.post, url, automation_info)
+        print(device_info)
+        r = self.send_request(requests.post, url, device_info)
         r.raise_for_status()
         return r.json()['id']  # return ID assigned by server
 
@@ -315,10 +340,12 @@ class DeviceManager(object):
 
     # values is a dictionary that maps from the tuple (device id, timeseries name) -> value
     def record_timeseries_values(self, values):
+        self.last_values.update(values)
+
         if self.local_sim:
             return
-        
-        ts = int(time.time()) # UTC timestamp
+
+        ts = int(time.time())  # UTC timestamp
         timestamp = datetime.datetime.fromtimestamp(ts, timezone.utc).isoformat()
 
         # The server-side API takes a dictionary 
@@ -414,6 +441,14 @@ class DeviceManager(object):
         r = self.send_request(requests.put, url, upload_automation_info)
         r.raise_for_status()
 
+    def send_alert(self, facility_id, subject, body):
+        assert facility_id in self.facilities
+        print('sending alert for facility: %s, subject: %s' % (facility_id, subject))
+        url = self.server_path + 'api/v1/facility/%s/alert/send' % facility_id
+        payload = {'subject': subject, 'body': body}
+        r = self.send_request(requests.post, url, payload)
+        r.raise_for_status()
+
     # send a request to the server and retry if expired token
     def send_request(self, request_func, url, json_payload=None):
         # To be really robust this should probably timeout after some period to make sure the other greenlets
@@ -460,7 +495,9 @@ class DeviceManager(object):
         # two of the ControlByWeb devices) were unused when I took over the device manager in 9/13/2021 and therefore
         # I couldn't test or validate the code. I left those classes in, with comments, and removed them from this
         # list so if they're needed again it's clear the code will need work and testing.
-        if dev_type == 'server' and make == 'Raspberry Pi':
+        if dev_type == 'sensor' and make == 'Mock':
+            return MockSensorDevice
+        elif dev_type == 'server' and make == 'Raspberry Pi':
             return RasPiDevice
 #        elif dev_type == 'ups':
 #            return NutUpsDevice

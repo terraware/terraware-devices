@@ -7,7 +7,7 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-g", "--get_devices", action="store_true", dest="get_devices", default=False,
                       help="get device specs from back end server")
-    parser.add_option("-d", "--upload_devices", action="store_true", dest="upload_devices", default=False,
+    parser.add_option("-d", "--upload_devices", dest="upload_devices",
                       help="upload device specs from local JSON file to back end server")
     parser.add_option("-a", "--upload_automations", dest="upload_automations",
                       help="upload facility automations from local JSON file to back end server")
@@ -17,7 +17,8 @@ if __name__ == '__main__':
         device_infos = d.load_device_config()  # assumes no local file set in environment variable
         open('devices.json', 'w').write(json.dumps({'devices': device_infos}, indent=2))
     elif options.upload_devices:
-        device_infos = d.load_device_config()
+        device_infos = json.loads(open(options.upload_devices).read())['devices']
+        print('loaded %d device(s) from %s' % (len(device_infos), options.upload_devices))
         no_parent_count = 0
         has_parent_count = 0
         for device_info in device_infos:
@@ -35,10 +36,10 @@ if __name__ == '__main__':
                 else:
                     d.send_device_definition_to_server(device_info)
                 has_parent_count += 1
-        print('created/updated %d devices without parents and %d device with parents' % (no_parent_count, has_parent_count))
+        print('created/updated %d device(s) without parents and %d device(s) with parents' % (no_parent_count, has_parent_count))
     elif options.upload_automations:
-        automations = json.loads(open(options.upload_automations).read())
-        print('loaded %d automations from %s' % (len(automations), options.upload_automations))
+        automations = json.loads(open(options.upload_automations).read())['automations']
+        print('loaded %d automation(s) from %s' % (len(automations), options.upload_automations))
         for automation in automations:
             if 'id' in automation:
                 d.update_automation_on_server(automation)

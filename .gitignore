@@ -4,3 +4,4 @@
 venv
 local.yaml
 logs
+mock.json
