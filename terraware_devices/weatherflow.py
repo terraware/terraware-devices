@@ -51,7 +51,7 @@ class TempestWeatherStation(TerrawareDevice):
             module.start()
 
         if self._diagnostic_mode:
-            print("Running TempestWeatherStation device in diagnostic mode")
+            print("running TempestWeatherStation in diagnostic mode")
 
     def _update_callback(self, data):
         for (a, b) in data:

@@ -26,7 +26,7 @@ class RasPiDevice(TerrawareDevice):
         # and whatnot. We'll need to figure out how to authoritatively enumerate all of this (or just change the class to only report
         # some fixed smaller set of timeseries.)
         timeseries_names = ['cpu_idle', 'cpu_iowait', 'cpu_system', 'cpu_user', 'memory_available', 'memory_total', 'temperature', 'uptime']
-        for name in ['array', 'sdcard']:
+        for name in ['sdcard']:
             for counter_name in ['read_bytes', 'read_time', 'write_bytes', 'write_time', 'busy_time']:
                 timeseries_names.append(f'disk_{name}_{counter_name}')
         return [[self.id, x, 'numeric', 2] for x in timeseries_names]
@@ -79,7 +79,7 @@ class RasPiDevice(TerrawareDevice):
                 if hasattr(cpu_times, 'iowait'):
                     values[(self.id, 'cpu_iowait')] = cpu_times.iowait
 
-        values.update(self._disk_io_metrics('md0', 'array'))
+#        values.update(self._disk_io_metrics('md0', 'array'))
         values.update(self._disk_io_metrics('mmcblk0', 'sdcard'))
 
         self._last_poll_time = time.time()

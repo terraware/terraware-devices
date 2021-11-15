@@ -91,8 +91,8 @@ class DeviceManager(object):
             device_class = self.get_device_class_to_instantiate(dev_info)
             if device_class:
                 device_diagnostic_mode = self.diagnostic_mode
-                if 'settings' in dev_info and 'diagnostic_mode' in dev_info['settings']:
-                    device_diagnostic_mode = dev_info['settings']['diagnostic_mode']
+                if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
+                    device_diagnostic_mode = dev_info['settings']['diagnosticMode']
                 device = device_class(dev_info, self.local_sim, device_diagnostic_mode, spec_path)
                 self.devices.append(device)
                 count_added += 1
