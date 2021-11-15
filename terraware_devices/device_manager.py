@@ -32,6 +32,7 @@ from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
 from .nut_ups import NutUpsDevice
 from .weatherflow import TempestWeatherStation
+from .automations import automation_class
 
 from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor
 
@@ -57,6 +58,7 @@ class DeviceManager(object):
         self.diagnostic_mode = os.environ.get('DIAGNOSTIC_MODE', False)
 
         self.devices = []
+        self.automations = []
         self.timeseries_values_to_send = []
         self.start_time = None
 
@@ -77,7 +79,6 @@ class DeviceManager(object):
         print ('Device Manager starting at {} with server {} for facilities {}'.format(now_str, self.server_path, self.facilities))
 
         self.refresh_access_token_from_server()
-
 
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
@@ -127,6 +128,21 @@ class DeviceManager(object):
         self.send_timeseries_definitions_to_server(timeseries_definitions)
 
         return count_added
+
+    def create_automations(self, automation_infos):
+        new_automations = 0
+        for automation_info in automation_infos:
+            name = automation_info['name']
+            facility_id = automation_info['facilityId']
+            config = automation_info['configuration']
+            automation_cls = automation_class(config['type'])
+            if automation_cls:
+                automation = automation_cls(facility_id, name, config)
+                self.automations.append(automation)
+                new_automations += 1
+            else:
+                print('automation type not found: %s' % config['type'])
+        print('created %d automations' % (new_automations))
 
     # run this function as a greenlet, polling the given device
     def device_polling_loop(self, device):
@@ -227,16 +243,13 @@ class DeviceManager(object):
         # the error handling makes it look rather complicated.
         device_infos = []
         for facility_id in self.facilities:
-            got_facility_devices = False
-            while not got_facility_devices:
+            received_facility_devices = False
+            while not received_facility_devices:
                 try:
                     r = self.send_request(requests.get, url.format(facility_id))
                     r.raise_for_status()
-
-                    if self.diagnostic_mode:
-                        print('Received the following devices from server for facility id {}:'.format(facility_id))
                     device_infos += r.json()['devices']
-                    got_facility_devices = True
+                    received_facility_devices = True
                 except Exception as ex:
                     print('error requesting devices from server %s: %s' % (server_name, ex))
                     gevent.sleep(120)
@@ -247,20 +260,15 @@ class DeviceManager(object):
 
     def send_device_definition_to_server(self, device_info):
         assert not 'id' in device_info
-        server_name = self.server_path
-        url = server_name + 'api/v1/devices'
-        upload_device_info = device_info.copy()
-        upload_device_info['facilityId'] = self.facilities[0]  # use first facility in list
+        url = self.server_path + 'api/v1/devices'
         print('creating device with type %s' % device_info['type'])
-        print(upload_device_info)
-        r = self.send_request(requests.post, url, upload_device_info)
+        print(automation_info)
+        r = self.send_request(requests.post, url, automation_info)
         r.raise_for_status()
         return r.json()['id']  # return ID assigned by server
 
     def update_device_definition_on_server(self, device_info):
-        assert 'id' in device_info
-        server_name = self.server_path
-        url = server_name + 'api/v1/devices/%s' % device_info['id']
+        url = self.server_path + 'api/v1/devices/%s' % device_info['id']
         upload_device_info = device_info.copy()
         del upload_device_info['id']  # ID goes in URL, not payload
         print('updating device info for device %d' % device_info['id'])
@@ -363,6 +371,49 @@ class DeviceManager(object):
             now_str = datetime.datetime.now().strftime('%H:%M:%S')
             print('%s: sent %d updates; had %d failures' % (now_str, len(values_to_send), fail_count))
 
+    def load_automations(self):
+        print('loading automations')
+        all_automation_infos = []
+        for facility_id in self.facilities:
+            received_facility_automations = False
+            while not received_facility_automations:
+                try:
+                    url = self.server_path + 'api/v1/facility/%s/automations' % facility_id
+                    r = self.send_request(requests.get, url)
+                    r.raise_for_status()
+                    automation_infos = r.json()['automations']
+                    for automation_info in automation_infos:
+                        automation_info['facilityId'] = facility_id
+                    all_automation_infos += automation_infos
+                    received_facility_automations = True
+                except Exception as ex:
+                    print('error requesting automations from server %s: %s' % (self.server_path, ex))
+                    gevent.sleep(120)
+        return all_automation_infos
+
+    def create_automation_on_server(self, automation_info):
+        assert automation_info['facilityId'] in self.facilities
+        assert not 'id' in automation_info
+        url = self.server_path + 'api/v1/facility/%s/automations' % automation_info['facilityId']
+        print('creating automation %s with type %s' % (automation_info['name'], automation_info['configuration']['type']))
+        print(automation_info)
+        upload_automation_info = automation_info.copy()
+        del upload_automation_info['facilityId']  # IDs goes in URL, not payload
+        r = self.send_request(requests.post, url, upload_automation_info)
+        r.raise_for_status()
+        return r.json()['id']  # return ID assigned by server
+
+    def update_automation_on_server(self, automation_info):
+        assert automation_info['facilityId'] in self.facilities
+        url = self.server_path + 'api/v1/facility/%s/automations/%s' % (automation_info['facilityId'], automation_info['id'])
+        upload_automation_info = automation_info.copy()
+        del upload_automation_info['facilityId']  # IDs goes in URL, not payload
+        del upload_automation_info['id']
+        print('updating automation %d' % automation_info['id'])
+        print(upload_automation_info)
+        r = self.send_request(requests.put, url, upload_automation_info)
+        r.raise_for_status()
+
     # send a request to the server and retry if expired token
     def send_request(self, request_func, url, json_payload=None):
         # To be really robust this should probably timeout after some period to make sure the other greenlets
@@ -409,10 +460,10 @@ class DeviceManager(object):
         # two of the ControlByWeb devices) were unused when I took over the device manager in 9/13/2021 and therefore
         # I couldn't test or validate the code. I left those classes in, with comments, and removed them from this
         # list so if they're needed again it's clear the code will need work and testing.
-        if dev_type == 'ups':
-            return NutUpsDevice
-        elif dev_type == 'server' and make == 'Raspberry Pi':
+        if dev_type == 'server' and make == 'Raspberry Pi':
             return RasPiDevice
+#        elif dev_type == 'ups':
+#            return NutUpsDevice
 #        elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
 #            return InHandRouterDevice
         elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
