@@ -91,16 +91,19 @@ class DeviceManager(object):
         # Create the devices and hubs and save in a flat list
         for dev_info in device_infos:
             device = None
-            device_class = self.get_device_class_to_instantiate(dev_info)
-            if device_class:
-                device_diagnostic_mode = self.diagnostic_mode
-                if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
-                    device_diagnostic_mode = dev_info['settings']['diagnosticMode']
-                device = device_class(dev_info, self.local_sim, device_diagnostic_mode, spec_path)
-                self.devices.append(device)
-                count_added += 1
+            if dev_info.get('settings', {}).get('enabled', True):
+                device_class = self.get_device_class_to_instantiate(dev_info)
+                if device_class:
+                    device_diagnostic_mode = self.diagnostic_mode
+                    if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
+                        device_diagnostic_mode = dev_info['settings']['diagnosticMode']
+                    device = device_class(dev_info, self.local_sim, device_diagnostic_mode, spec_path)
+                    self.devices.append(device)
+                    count_added += 1
+                else:
+                    print('device not recognized: {}'.format(dev_info))
             else:
-                print('device not recognized: {}'.format(dev_info))
+                print('device disabled (name: %s, type: %s)' % (dev_info['name'], dev_info['type']))
 
         # For devices that are children hooked to hubs, find the hubs and link them up.
         for device in self.devices:
@@ -161,7 +164,7 @@ class DeviceManager(object):
                 if self.diagnostic_mode:
                     print('=== DEVICE POLLING LOOP [{}] - {} values received: ==='.format(device.name, len(values)))
                     for id_name_pair, value in values.items():
-                        print('    %s: %.2f' % (id_name_pair, value))
+                        print('    %s: %s' % (id_name_pair, value))
                     print('======================================================')
 
             # wait until next round of polling

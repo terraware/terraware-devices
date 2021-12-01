@@ -1,25 +1,22 @@
-# This file is a modified version of the home assistant driver, sensor.py, from here:
-# https://github.com/briis/smartweatherudp
-# It's licensed under the MIT License so this use is permitted but the license needs to be included
-from pysmartweatherudp import SWReceiver
-from .base import TerrawareDevice, TerrawareHub
-import gevent
+import json
 import random
+import socket
+import gevent
+from pysmartweatherudp.utils import getDataSet
+from .base import TerrawareDevice
+
 
 SENSOR_TYPES = [
     'temperature',
     'dewpoint',
-    'feels_like',
-    'heat_index',
-    'wind_chill',
+#    'feels_like',
+#    'heat_index',
+#    'wind_chill',
     'wind_speed',
     'wind_bearing',
-    'wind_speed_rapid',
-    'wind_bearing_rapid',
     'wind_gust',
     'wind_lull',
     'wind_direction',
-    'precipitation',
     'precipitation_rate',
     'humidity',
     'pressure',
@@ -28,38 +25,45 @@ SENSOR_TYPES = [
     'illuminance',
     'lightning_count',
     'airbattery',
-    'skybattery'
+    'skybattery',
 ]
 
+
+test_message = '{"serial_number":"ST-00051516","type":"obs_st","hub_sn":"HB-00041917","obs":[[1638242453,0.00,0.00,0.00,0,3,1016.47,13.19,82.26,0,0.00,0,0.000000,0,0,0,2.745,1]],"firmware_revision":156}'
+
+
 class TempestWeatherStation(TerrawareDevice):
+
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
-
-        self._unit_system = 'metric'
-        settings = dev_info.get('settings')
-        if settings:
-            # Can be either 'metric
-            self._unit_system = settings.get('unitSystem', 'metric')
-
-        self._state = {}
-
-        if self._local_sim:
-            gevent.spawn(self.sim)
-        else:
-            module = SWReceiver(units=self._unit_system)
-            module.registerCallback(self._update_callback)
-            module.start()
-
         if self._diagnostic_mode:
             print("running TempestWeatherStation in diagnostic mode")
+        self._state = {}
+        if self._local_sim:
+            self.update(getDataSet(test_message, 'metric', ignore_errors=True))  # do a quick test
+            gevent.spawn(self.sim)
+        else:
+            UDP_IP = "0.0.0.0"
+            UDP_PORT = 50222
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.bind((UDP_IP, UDP_PORT))
+            gevent.spawn(self.run)
+            if self._diagnostic_mode:
+                print("started weather station UDP receiver")
 
-    def _update_callback(self, data):
-        for (a, b) in data:
-            if a in SENSOR_TYPES:
-                self._state[(self.id, a)] = b
+    def run(self):
+        while True:
+            data, addr = self.sock.recvfrom(1024)
+            data = data.decode()
+            data_json = json.loads(data)
+            if data_json['type'] == 'obs_st':
+                self.update(getDataSet(data, 'metric', ignore_errors=True))
 
+    def update(self, dataset):
+        for sensor_type in SENSOR_TYPES:
+            self._state[(self.id, sensor_type)] = getattr(dataset, sensor_type)
         if self._diagnostic_mode:
-            print("Data received: %s %s %s %s", data.type, data.timestamp, data.precipitation, data.temperature)
+            print("Data received: %s %s %s" % (dataset.type, dataset.timestamp, dataset.temperature))
 
     def get_timeseries_definitions(self):
         return [[self.id, a, 'numeric', 2] for a in SENSOR_TYPES]
