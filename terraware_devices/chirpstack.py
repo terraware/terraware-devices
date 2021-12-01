@@ -285,6 +285,25 @@ class DraginoSoilSensor(LoRaSensor):
     def get_timeseries_definitions(self):
         return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['temperature', 'moisture', 'conductivity']]
 
+
+
+class BoveFlowSensor(LoRaSensor):
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+
+    def receive_payload(self, payload: bytes):
+        message = payload.hex()
+        if message.startswith('810a901f'):
+            flow = int(payload[9:5:-1].hex())  # assuming simple binary coded decimal
+            self.set_state('flow', flow)
+            if self._diagnostic_mode:
+                print('flow: %d' % flow)
+
+    def get_timeseries_definitions(self):
+        return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['flow']]
+
+
+
 # NOTE $BSHARP commenting this out for now - in the homeassistant driver I added this so Amy could see the raw hex string of the payload
 # coming in from the dev board. But the device manager doesn't love string-valued timeseries (it's really only setup for scalar numeric ones right now)
 # so I'm just commenting this out - but it should be easy to add later when there are more LoRa devices with paylods ready to decode.

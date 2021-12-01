@@ -28,14 +28,13 @@ from .base import TerrawareDevice, TerrawareHub
 from .mock import MockSensorDevice
 from .control_by_web import CBWRelayDevice, CBWWeatherStationDevice, CBWSensorHub, CBWTemperatureHumidityDevice
 from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
+from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor, BoveFlowSensor
 from .modbus import ModbusDevice
 from .raspi import RasPiDevice
 from .inhand_router import InHandRouterDevice
 from .nut_ups import NutUpsDevice
 from .weatherflow import TempestWeatherStation
 from .automations import automation_class
-
-from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor
 
 
 # manages a set of devices; each device handles a connection to physical hardware
@@ -525,6 +524,9 @@ class DeviceManager(object):
         # https://www.dragino.com/products/lora-lorawan-end-node/item/159-lse01.html
         elif dev_type == 'sensor' and make == 'Dragino' and model == 'LSE01':
             return DraginoSoilSensor
+
+        elif dev_type == 'sensor' and make == 'Bove' and (model == 'BECO X' or model == 'B95 VPW'):
+            return BoveFlowSensor
 
         elif dev_type == 'hub' and make == 'SenseCAP':
             return ChirpStackHub
