@@ -286,8 +286,38 @@ class DraginoSoilSensor(LoRaSensor):
         return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['temperature', 'moisture', 'conductivity']]
 
 
+class DraginoLeakSensor(LoRaSensor):
+
+    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+        super().__init__(dev_info, local_sim, diagnostic_mode)
+
+    def receive_payload(self, payload: bytes):
+        if len(payload) == 10:
+            batt_raw = ((payload[0] << 8) | payload[1]) & 0x3FFF
+            batt_volts = batt_raw / 1000
+            model = payload[2]
+            if model == 2:
+                leak_status = bool(payload[0] & 0x40);
+                leak_count = (payload[3] << 16) | (payload[4] << 8) | payload[5];
+                leak_duration = (payload[6] << 16) | (payload[7] << 8) | payload[8];
+                self.set_state('battery level', batt_volts)
+                self.set_state('leak status', leak_status)
+                self.set_state('total leak count', leak_count)
+                self.set_state('total leak duration', leak_duration)  # minutes
+                if self._diagnostic_mode:
+                    print('batt: %.2f, status: %d, count: %d, minutes: %d' % (batt_volts, leak_status, leak_count, leak_duration))
+
+    def get_timeseries_definitions(self):
+        return [
+            [self.id, 'battery level', 'Numeric', 3],
+            [self.id, 'leak status', 'Numeric', 0],
+            [self.id, 'total leak count', 'Numeric', 0],
+            [self.id, 'total leak duration', 'Numeric', 0],
+        ]
+
 
 class BoveFlowSensor(LoRaSensor):
+
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
 
@@ -301,7 +331,6 @@ class BoveFlowSensor(LoRaSensor):
 
     def get_timeseries_definitions(self):
         return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['flow']]
-
 
 
 # NOTE $BSHARP commenting this out for now - in the homeassistant driver I added this so Amy could see the raw hex string of the payload
@@ -321,3 +350,9 @@ class BoveFlowSensor(LoRaSensor):
 #    return [
 #        LoRaDevBoardRawPayloadSensor(hass, 'payload', name, address),
 #    ]
+
+
+if __name__ == '__main__':
+    sensor = DraginoLeakSensor({'id': 1000, 'name': 'test', 'address': 'a840414aa1833eac'}, False, True, '')
+    sensor.receive_payload(bytes.fromhex('4c180200010200030400'))
+    sensor.receive_payload(bytes.fromhex('0c720200000100000000'))
