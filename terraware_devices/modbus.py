@@ -67,7 +67,8 @@ class ModbusDevice(TerrawareDevice):
                     print('    (%s, %s): %.2f' % (self.id, seq_info['name'], value))
         if values:
             self.last_update_time = time.time()
-        print('received %d of %d value(s) from %s' % (len(values), len(self._seq_infos), self._host))
+        if self._diagnostic_mode:
+            print('received %d of %d value(s) from %s' % (len(values), len(self._seq_infos), self._host))
         if len(values) != len(self._seq_infos):
             print('received fewer values than expected; reconnecting')
             self.reconnect()
