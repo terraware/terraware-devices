@@ -297,9 +297,9 @@ class DraginoLeakSensor(LoRaSensor):
             batt_volts = batt_raw / 1000
             model = payload[2]
             if model == 2:
-                leak_status = bool(payload[0] & 0x40);
-                leak_count = (payload[3] << 16) | (payload[4] << 8) | payload[5];
-                leak_duration = (payload[6] << 16) | (payload[7] << 8) | payload[8];
+                leak_status = 1 if (payload[0] & 0x40) else 0
+                leak_count = (payload[3] << 16) | (payload[4] << 8) | payload[5]
+                leak_duration = (payload[6] << 16) | (payload[7] << 8) | payload[8]
                 self.set_state('battery level', batt_volts)
                 self.set_state('leak status', leak_status)
                 self.set_state('total leak count', leak_count)
