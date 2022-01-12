@@ -63,6 +63,7 @@ class ChirpStackHub(TerrawareHub):
 
         self.gateway_port = dev_info['port']
         self.gateway_ip = dev_info['address']
+        self.expected_update_interval = None  # don't expect sensor updates for the hub itself, only connected devices
         
         self.application_id = 0
         self.api_token = "no token specified in config data"
@@ -132,8 +133,6 @@ class ChirpStackHub(TerrawareHub):
             gevent.sleep(5)
 
     def process_uplink(self, dev_eui: str, payload: bytes):
-        if self._diagnostic_mode:
-            print('%s: %s' % (dev_eui, payload))
         sensor_address = dev_eui.lower()
         sensor = next((x for x in self.devices if x.address == sensor_address), None)
         if sensor:
@@ -236,6 +235,7 @@ class LoRaSensor(TerrawareDevice):
 class SenseCapSoilSensor(LoRaSensor):
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytearray):
         if payload[1] == 0x7 and payload[2] == 0x10:
@@ -265,6 +265,7 @@ class SenseCapSoilSensor(LoRaSensor):
 class DraginoSoilSensor(LoRaSensor):
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytes):
         moisture_raw = int.from_bytes(payload[4:6], 'big', signed=False)
@@ -290,6 +291,7 @@ class DraginoLeakSensor(LoRaSensor):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytes):
         if len(payload) == 10:
@@ -320,6 +322,7 @@ class BoveFlowSensor(LoRaSensor):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytes):
         message = payload.hex()

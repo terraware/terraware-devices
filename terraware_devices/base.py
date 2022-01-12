@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -29,7 +30,10 @@ class TerrawareDevice(ABC):
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         self._id = dev_info["id"]
         self._name = dev_info["name"]
-        
+        self.facility_id = dev_info['facilityId']
+        self.last_update_time = time.time()  # used for watchdog; don't know when last update was on startup
+        self.expected_update_interval = 5 * 60  # used for watchdog
+
         # By default we use the global local_sim setting, but they can override it either way in the device's settings itself.
         self._local_sim = local_sim
         settings_items = dev_info.get("settings")

@@ -1,3 +1,4 @@
+import time
 import random
 import socket
 import socketserver
@@ -59,6 +60,7 @@ class OmniSenseHub(TerrawareHub):
                     # key, not sensor_addr. We should clean up all this terminology at some point.
                     self.recent_sensor_data[(device.id, 'temperature')] = temperature
                     self.recent_sensor_data[(device.id, 'humidity'   )] = humidity
+                    device.last_update_time = time.time()
                 else:
                     print('data from unknown omnisense device: %s' % sensor_addr)
                     if not self.unknown_device_log:
@@ -97,6 +99,7 @@ class OmniSenseTemperatureHumidityDevice(TerrawareDevice):
     def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.sensor_addr = dev_info["address"]
+        self.expected_update_interval = 30 * 60
         print('created OmniSenseTemperatureHumidityDevice with id %s' % self.sensor_addr)
 
     # These actually get returned by the hub object - our poll() does nothing - but that's fine - we can supply

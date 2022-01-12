@@ -18,7 +18,7 @@ class AlarmMonitor(TerrawareAutomation):
             # if transition to alarm state, send notification
             if state and not self.prev_state:
                 message = self._name + " Alarm"
-                device_manager.send_alert(self._facility_id, message, message)
+                device_manager.send_alert(self._facility_id, message, message, message)
             self.prev_state = state
 
 
@@ -44,11 +44,13 @@ class SensorBoundsAlert(TerrawareAutomation):
             if not self.lower_threshold is None:
                 if value < self.lower_threshold and (self.prev_value >= self.lower_threshold or self.prev_value is None):
                     message = '%s value (%.2f) below lower threshold (%.2f)' % (self._name, value, self.lower_threshold)
-                    device_manager.send_alert(self._facility_id, message, message)
+                    label = '%d too low' % self.monitor_device_id
+                    device_manager.send_alert(self._facility_id, label, message, message)
             if not self.upper_threshold is None:
                 if value > self.upper_threshold and (self.prev_value <= self.upper_threshold or self.prev_value is None):
                     message = '%s value (%.2f) above upper threshold (%.2f)' % (self._name, value, self.upper_threshold)
-                    device_manager.send_alert(self._facility_id, message, message)
+                    label = '%d too high' % self.monitor_device_id
+                    device_manager.send_alert(self._facility_id, label, message, message)
             self.prev_value = value
 
 

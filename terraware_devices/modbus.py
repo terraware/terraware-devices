@@ -27,8 +27,6 @@ class ModbusDevice(TerrawareDevice):
             rtu_over_tcp = settings_items.get('rtu-over-tcp', False)
             self._read_holding = settings_items.get('holding', False)
 
-        self.last_update_time = None
-
         framer = ModbusRtuFramer if rtu_over_tcp else ModbusSocketFramer
 
         port = dev_info["port"]
@@ -65,8 +63,6 @@ class ModbusDevice(TerrawareDevice):
                 values[(self.id, seq_info['name'])] = value
                 if self._diagnostic_mode:
                     print('    (%s, %s): %.2f' % (self.id, seq_info['name'], value))
-        if values:
-            self.last_update_time = time.time()
         if self._diagnostic_mode:
             print('received %d of %d value(s) from %s' % (len(values), len(self._seq_infos), self._host))
         if len(values) != len(self._seq_infos):

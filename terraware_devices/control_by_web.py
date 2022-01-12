@@ -15,7 +15,6 @@ class CBWRelayDevice(TerrawareDevice):
         self._host = dev_info["address"]
         self._port = dev_info["port"]
         self._sim_state = 0
-        self.last_update_time = None
         print('created relay device (%s:%d)' % (self._host, self._port))
 
     def get_timeseries_definitions(self):
@@ -25,7 +24,6 @@ class CBWRelayDevice(TerrawareDevice):
         pass
 
     def poll(self):
-        self.last_update_time = time.time()
         return {
             (self.id, 'relay-1'): self.read_state(),
         }
@@ -61,7 +59,6 @@ class CBWWeatherStationDevice(TerrawareDevice):
         self._host = dev_info["address"]
         self._port = dev_info["port"]
         self._sim_state = 0
-        self.last_update_time = None
         self.fields = ['temp', 'humidity', 'windSpd', 'windDir', 'rainTot', 'solarRad', 'barPressure', 'dewPoint']
         print('created CBW weather station device (%s:%d)' % (self._host, self._port))
 
@@ -72,7 +69,6 @@ class CBWWeatherStationDevice(TerrawareDevice):
         pass
 
     def poll(self):
-        self.last_update_time = time.time()
         if self._local_sim:
             xml = self.sample_data()
         else:

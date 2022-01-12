@@ -60,8 +60,10 @@ class DeviceManager(object):
         self.devices = []
         self.automations = []
         self.timeseries_values_to_send = []
-        self.start_time = None
+        self.send_interval = float(os.environ.get('SEND_INTERVAL', 120))  # seconds between sending data to server
         self.last_values = {}  # most recent value for each time series; stored by (device id, series name)
+        self.sent_alerts = {}  # used to keep track of which alerts have already been sent, so as to avoid sending duplicate alerts
+        self.last_upload_time = time.time()  # used for watchdog
 
         self.local_config_file = os.environ.get('LOCAL_CONFIG_FILE_OVERRIDE', None)
         self.local_sim = os.environ.get('LOCAL_SIM', False)
@@ -160,6 +162,7 @@ class DeviceManager(object):
 
             if values:
                 self.record_timeseries_values(values)
+                device.last_update_time = time.time()
                 if self.diagnostic_mode:
                     print('=== DEVICE POLLING LOOP [{}] - {} values received: ==='.format(device.name, len(values)))
                     for id_name_pair, value in values.items():
@@ -190,25 +193,29 @@ class DeviceManager(object):
         print('launched %d greenlet(s) for device and hub polling' % device_polling_greenlet_count)
         for automation in self.automations:
             gevent.spawn(self.automation_polling_loop, automation)
-        self.start_time = time.time()
+        gevent.spawn(self.watchdog_loop)
         while True:
             self.send_timeseries_values_to_server()
             gevent.sleep(120)
 
-    # check on devices; restart them as needed; if all is good, send watchdog message to server
-    def watchdog_update(self):
-        # if it has been a while since startup, start checking device updates
-        if time.time() - self.start_time > 30:
-            devices_ok = True
+    def watchdog_loop(self):
+        gevent.sleep(self.send_interval + 30)
+        while True:
             for device in self.devices:
-                if device.last_update_time is None or time.time() - device.last_update_time > 10 * 60:
-                    logging.info('no recent update for device {} (id {}); reconnecting'.format(device.name, device.id))
-                    device.reconnect()
-                    devices_ok = False
-
-            # if all devices are updating, send a watchdog message to server
-            if devices_ok:
-                self.controller.send_message('watchdog', {})
+                if not device.expected_update_interval is None:
+                    if time.time() - device.last_update_time > device.expected_update_interval:
+                        logging.info('no recent update for device {} (id {}); reconnecting'.format(device.name, device.id))
+                        message = 'no recent update for device %s' % device.name
+                        self.send_alert(device.facility_id, '%d watchdog' % device.id, message, message)
+                        device.reconnect()
+                    else:
+                        self.clear_alert(device.facility_id, '%d watchdog' % device.id)
+            if time.time() - self.last_upload_time > self.send_interval * 3 + 30:
+                message = 'error sending time series data to server'
+                self.send_alert(self.facilities[0], 'send_to_server', message, message)
+            else:
+                self.clear_alert(self.facilities[0], 'send_to_server')
+            gevent.sleep(30)
 
     def find_device(self, device_id):
         device = None
@@ -396,6 +403,7 @@ class DeviceManager(object):
                     print('    device: %d, time series: %s' % (failed_update['deviceId'], failed_update['timeseriesName']))
                 fail_count = len(failures)
             else:
+                self.last_upload_time = time.time()  # record successful upload for watchdog; we assume that there is some data to upload each time this is called
                 fail_count = 0
             now_str = datetime.datetime.now().strftime('%H:%M:%S')
             print('%s: sent %d updates; had %d failures' % (now_str, len(values_to_send), fail_count))
@@ -443,13 +451,26 @@ class DeviceManager(object):
         r = self.send_request(requests.put, url, upload_automation_info)
         r.raise_for_status()
 
-    def send_alert(self, facility_id, subject, body):
-        assert facility_id in self.facilities
-        print('sending alert for facility: %s, subject: %s' % (facility_id, subject))
-        url = self.server_path + 'api/v1/facility/%s/alert/send' % facility_id
-        payload = {'subject': subject, 'body': body}
-        r = self.send_request(requests.post, url, payload)
-        r.raise_for_status()
+    def send_alert(self, facility_id, label, subject, body):
+        already_sent = False
+        if (facility_id, label) in self.sent_alerts:
+            last_sent_time = self.sent_alerts[(facility_id, label)]
+            if time.time() - last_sent_time < 24 * 60 * 60:
+                print('already sent alert with label: %s' % label)
+                already_sent = True
+        if not already_sent:
+            assert facility_id in self.facilities
+            print('sending alert for facility: %s, subject: %s' % (facility_id, subject))
+            url = self.server_path + 'api/v1/facility/%s/alert/send' % facility_id
+            payload = {'subject': subject, 'body': body}
+            r = self.send_request(requests.post, url, payload)
+            r.raise_for_status()
+            self.sent_alerts[(facility_id, label)] = time.time()
+
+    def clear_alert(self, facility_id, label):
+        key = (facility_id, label)
+        if key in self.sent_alerts:
+            del self.sent_alerts[key]
 
     # send a request to the server and retry if expired token
     def send_request(self, request_func, url, json_payload=None):
