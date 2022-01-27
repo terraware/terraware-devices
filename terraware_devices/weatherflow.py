@@ -61,7 +61,8 @@ class TempestWeatherStation(TerrawareDevice):
 
     def update(self, dataset):
         for sensor_type in SENSOR_TYPES:
-            self._state[(self.id, sensor_type)] = getattr(dataset, sensor_type)
+            if hasattr(dataset, sensor_type):
+                self._state[(self.id, sensor_type)] = getattr(dataset, sensor_type)
         if self._diagnostic_mode:
             print("Data received: %s %s %s" % (dataset.type, dataset.timestamp, dataset.temperature))
 

@@ -5,17 +5,22 @@ from terraware_devices.device_manager import DeviceManager
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option("-g", "--get_devices", action="store_true", dest="get_devices", default=False,
-                      help="get device specs from back end server")
+    parser.add_option("-g", "--get_facility_info", action="store_true", dest="get_facility_info", default=False,
+                      help="get device specs and automations from back end server")
     parser.add_option("-d", "--upload_devices", dest="upload_devices",
                       help="upload device specs from local JSON file to back end server")
     parser.add_option("-a", "--upload_automations", dest="upload_automations",
                       help="upload facility automations from local JSON file to back end server")
     d = DeviceManager()
     (options, args) = parser.parse_args()
-    if options.get_devices:
+    if options.get_facility_info:
         device_infos = d.load_device_config()  # assumes no local file set in environment variable
-        open('devices.json', 'w').write(json.dumps({'devices': device_infos}, indent=2))
+        automations = d.load_automations()
+        facility_info = {
+            'devices': device_infos,
+            'automations': automations
+        }
+        open('data.json', 'w').write(json.dumps(facility_info, indent=2))
     elif options.upload_devices:
         device_infos = json.loads(open(options.upload_devices).read())['devices']
         print('loaded %d device(s) from %s' % (len(device_infos), options.upload_devices))
