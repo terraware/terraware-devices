@@ -1,6 +1,6 @@
 import json
 from optparse import OptionParser
-from terraware_devices.device_manager import DeviceManager
+from device_manager import DeviceManager
 
 
 if __name__ == '__main__':

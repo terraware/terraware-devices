@@ -24,17 +24,9 @@ import os
 
 # other imports
 import requests
-from .base import TerrawareDevice, TerrawareHub
-from .mock import MockSensorDevice
-from .control_by_web import CBWRelayDevice, CBWWeatherStationDevice, CBWSensorHub, CBWTemperatureHumidityDevice
-from .omnisense import OmniSenseHub, OmniSenseTemperatureHumidityDevice
-from .chirpstack import ChirpStackHub, SenseCapSoilSensor, DraginoSoilSensor, BoveFlowSensor, DraginoLeakSensor
-from .modbus import ModbusDevice
-from .raspi import RasPiDevice
-from .inhand_router import InHandRouterDevice
-from .nut_ups import NutUpsDevice
-from .weatherflow import TempestWeatherStation
-from .automations import automation_class
+from devices.base import TerrawareDevice, TerrawareHub
+from devices.classes import get_device_class
+from automations.classes import get_automation_class
 
 
 # manages a set of devices; each device handles a connection to physical hardware
@@ -86,14 +78,14 @@ class DeviceManager(object):
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
         count_added = 0
-        spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/../specs'
+        spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/specs'
         print('device list has information for %d device(s)' % len(device_infos))
 
         # Create the devices and hubs and save in a flat list
         for dev_info in device_infos:
             device = None
             if dev_info.get('settings', {}).get('enabled', True):
-                device_class = self.get_device_class_to_instantiate(dev_info)
+                device_class = get_device_class(dev_info)
                 if device_class:
                     device_diagnostic_mode = self.diagnostic_mode
                     if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
@@ -141,9 +133,9 @@ class DeviceManager(object):
             name = automation_info['name']
             facility_id = automation_info['facilityId']
             config = automation_info['configuration']
-            automation_cls = automation_class(config['type'])
-            if automation_cls:
-                automation = automation_cls(facility_id, name, config)
+            automation_class = get_automation_class(config['type'])
+            if automation_class:
+                automation = automation_class(facility_id, name, config)
                 self.automations.append(automation)
                 new_automations += 1
             else:
@@ -503,63 +495,6 @@ class DeviceManager(object):
                     print('    Success, returning result')
                     print('**************************************************')
                 return r
-
-    # This is sort of a glorified dictionary lookup, and it could be extracted out of this file and
-    # we could do something like walk the directory and ask each py file to add class defs to some
-    # dictionary so there's not even a direct awareness of the various sensor classes here in this
-    # file. But this seems like the right compromise of legibility and decoupling at the moment.
-    def get_device_class_to_instantiate(self, dev_info):
-        dev_type = dev_info.get('type')
-        make = dev_info.get('make')
-        model = dev_info.get('model')
-        protocol = dev_info.get('protocol')
-
-        # This list doesn't include all the things we have driver classes for. The missing ones (bluetooth stuff,
-        # two of the ControlByWeb devices) were unused when I took over the device manager in 9/13/2021 and therefore
-        # I couldn't test or validate the code. I left those classes in, with comments, and removed them from this
-        # list so if they're needed again it's clear the code will need work and testing.
-        if dev_type == 'sensor' and make == 'Mock':
-            return MockSensorDevice
-        elif dev_type == 'server' and make == 'Raspberry Pi':
-            return RasPiDevice
-#        elif dev_type == 'ups':
-#            return NutUpsDevice
-#        elif dev_type == 'router' and make == 'InHand Networks' and model == 'IR915L':
-#            return InHandRouterDevice
-        elif dev_type == 'relay' and make == 'ControlByWeb' and model == 'WebRelay':
-            return CBWRelayDevice
-        elif dev_type == 'weather' and make == 'ControlByWeb' and model == 'X-422':
-            return CBWWeatherStationDevice
-        elif dev_type == 'sensor' and make == 'OmniSense' and model == 'S-11':
-            return OmniSenseTemperatureHumidityDevice
-        elif dev_type == "hub" and make == "OmniSense":
-            return OmniSenseHub
-        elif protocol == 'modbus':
-            return ModbusDevice
- 
-        # SenseCap doesn't really have a model number / name for this sensor:
-        # https://www.seeedstudio.com/LoRaWAN-Soil-Moisture-and-Temperature-Sensor-EU868-p-4316.html
-        elif dev_type == 'sensor' and make == 'SenseCAP':
-            return SenseCapSoilSensor
-
-        # https://www.dragino.com/products/lora-lorawan-end-node/item/159-lse01.html
-        elif dev_type == 'sensor' and make == 'Dragino' and model == 'LSE01':
-            return DraginoSoilSensor
-
-        elif dev_type == 'sensor' and make == 'Dragino' and model == 'LWL02':
-            return DraginoLeakSensor
-
-        elif dev_type == 'sensor' and make == 'Bove' and (model == 'BECO X' or model == 'B95 VPW'):
-            return BoveFlowSensor
-
-        elif dev_type == 'hub' and make == 'SenseCAP':
-            return ChirpStackHub
-
-        elif dev_type == 'sensor' and make == 'WeatherFlow' and model == 'Tempest':
-            return TempestWeatherStation
-
-        else:
-            return None
 
 
 def abbreviate_string(thing_to_stringify, prefix, suffix):

@@ -60,11 +60,14 @@ class TempestWeatherStation(TerrawareDevice):
                 self.update(getDataSet(data, 'metric', ignore_errors=True))
 
     def update(self, dataset):
-        for sensor_type in SENSOR_TYPES:
-            if hasattr(dataset, sensor_type):
-                self._state[(self.id, sensor_type)] = getattr(dataset, sensor_type)
-        if self._diagnostic_mode:
-            print("Data received: %s %s %s" % (dataset.type, dataset.timestamp, dataset.temperature))
+        if dataset:
+            for sensor_type in SENSOR_TYPES:
+                if hasattr(dataset, sensor_type):
+                    self._state[(self.id, sensor_type)] = getattr(dataset, sensor_type)
+            if self._diagnostic_mode:
+                print("Weather data received: %s %s %s" % (dataset.type, dataset.timestamp, dataset.temperature))
+        else:
+            print("Invalid weather data")
 
     def get_timeseries_definitions(self):
         return [[self.id, a, 'numeric', 2] for a in SENSOR_TYPES]

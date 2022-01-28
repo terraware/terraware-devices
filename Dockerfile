@@ -40,9 +40,10 @@ COPY --from=build /app/entry.sh /app/entry.sh
 COPY --from=build /usr/local /usr/local
 RUN ldconfig
 
-COPY balena-config.yaml config.yaml main.py ble_scan.py /app/
+COPY balena-config.yaml config.yaml *.py /app/
 COPY specs /app/specs
-COPY terraware_devices /app/terraware_devices
+COPY devices /app/devices
+COPY automations /app/automations
 
 COPY ups.conf nut.conf /etc/nut/
 

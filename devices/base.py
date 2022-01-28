@@ -84,18 +84,3 @@ class TerrawareHub(TerrawareDevice):
     def notify_all_devices_added(self):
         # This is called after all child sensors are added to a hub so you can e.g. start a listener service to get sensor data.
         ...
-
-
-class TerrawareAutomation(ABC):
-
-    def __init__(self, facility_id, name, config):
-        self._facility_id = facility_id
-        self._name = name
-        self._verbosity = config.get('verbosity', 0)
-        print('creating automation; facility: %s, name: %s, type: %s' % (facility_id, name, config['type']))
-
-    def name(self):
-        return self._name
-
-    def facility_id(self):
-        return self._facility_id
