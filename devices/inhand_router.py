@@ -46,7 +46,7 @@ def poll_router(device_id, host, username, password):
 # performs monitoring of the InHand Networks IR915L 4G router
 class InHandRouterDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._address = dev_info["address"]
         self._username = "adm"

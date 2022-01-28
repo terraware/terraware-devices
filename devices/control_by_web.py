@@ -10,7 +10,7 @@ from .base import TerrawareDevice, TerrawareHub
 
 class CBWRelayDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._host = dev_info["address"]
         self._port = dev_info["port"]
@@ -54,7 +54,7 @@ class CBWRelayDevice(TerrawareDevice):
 
 class CBWWeatherStationDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._host = dev_info["address"]
         self._port = dev_info["port"]
@@ -93,7 +93,7 @@ class CBWWeatherStationDevice(TerrawareDevice):
 # e.g. ControlByWeb X-DTHS-WMX
 class CBWTemperatureHumidityDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.sensor_index = int(dev_info["settings"])
         print('created CBW temperature and humidity sensor')
@@ -112,7 +112,7 @@ class CBWTemperatureHumidityDevice(TerrawareDevice):
 # e.g. ControlByWeb X-405
 class CBWSensorHub(TerrawareHub):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.address = dev_info["address"]
 

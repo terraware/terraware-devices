@@ -52,7 +52,7 @@ class ChirpStackUplinkHandler(BaseHTTPRequestHandler):
         return Parse(body, pl)
 
 class ChirpStackHub(TerrawareHub):
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         if self._diagnostic_mode:
             print('running ChirpStackHub in diagnostic mode')
@@ -233,7 +233,7 @@ class LoRaSensor(TerrawareDevice):
 # Note: since this sensor sends separate uplinks for the temp & moisture payloads, both sensor types will get both,
 # just ignore the payloads that aren't for us        
 class SenseCapSoilSensor(LoRaSensor):
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
@@ -263,7 +263,7 @@ class SenseCapSoilSensor(LoRaSensor):
 # 2 bytes: soil conductivity - dev 0-20,000 (or greater, it says, strangely) - value is in uS/cm
 # 1 byte: digital interrupt (optional)
 class DraginoSoilSensor(LoRaSensor):
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
@@ -289,7 +289,7 @@ class DraginoSoilSensor(LoRaSensor):
 
 class DraginoLeakSensor(LoRaSensor):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
@@ -320,7 +320,7 @@ class DraginoLeakSensor(LoRaSensor):
 
 class BoveFlowSensor(LoRaSensor):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 

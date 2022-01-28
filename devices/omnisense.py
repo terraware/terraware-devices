@@ -20,7 +20,7 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
 
 class OmniSenseHub(TerrawareHub):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         global hub_instance
         assert hub_instance is None
@@ -96,7 +96,7 @@ class OmniSenseHub(TerrawareHub):
 
 class OmniSenseTemperatureHumidityDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.sensor_addr = dev_info["address"]
         self.expected_update_interval = 30 * 60

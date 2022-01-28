@@ -34,7 +34,7 @@ test_message = '{"serial_number":"ST-00051516","type":"obs_st","hub_sn":"HB-0004
 
 class TempestWeatherStation(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         if self._diagnostic_mode:
             print("running TempestWeatherStation in diagnostic mode")

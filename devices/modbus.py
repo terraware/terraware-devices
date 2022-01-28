@@ -2,6 +2,7 @@ import csv
 import time
 import random
 import logging
+import pathlib
 from typing import Optional
 
 import gevent
@@ -13,7 +14,7 @@ from .base import TerrawareDevice, TerrawareHub
 
 class ModbusDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._host = dev_info["address"]
         self._unit = 1  # aka modbus slave number
@@ -33,6 +34,7 @@ class ModbusDevice(TerrawareDevice):
         self._modbus_client = ModbusTcpClient(self._host, port=port, framer=framer)
         self._seq_infos = []
 
+        spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/../specs'
         spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
 
         # load seqeuence info

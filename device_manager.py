@@ -9,7 +9,6 @@ import json
 import gevent
 import random
 import logging
-import pathlib
 import base64  # temp for forwarding data to cloud server
 
 # For timestamping our timeseries values locally since we batch them up and don't send immediately
@@ -78,7 +77,6 @@ class DeviceManager(object):
     # add/initialize devices using a list of dictionaries of device info
     def create_devices(self, device_infos):
         count_added = 0
-        spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/specs'
         print('device list has information for %d device(s)' % len(device_infos))
 
         # Create the devices and hubs and save in a flat list
@@ -90,7 +88,7 @@ class DeviceManager(object):
                     device_diagnostic_mode = self.diagnostic_mode
                     if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
                         device_diagnostic_mode = dev_info['settings']['diagnosticMode']
-                    device = device_class(dev_info, self.local_sim, device_diagnostic_mode, spec_path)
+                    device = device_class(dev_info, self.local_sim, device_diagnostic_mode)
                     self.devices.append(device)
                     count_added += 1
                 else:

@@ -9,7 +9,7 @@ from .base import TerrawareDevice, TerrawareHub
 # performs monitoring a raspberry pi
 class RasPiDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, spec_path):
+    def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._last_disk_counters = {}
         self._last_poll_time = None
