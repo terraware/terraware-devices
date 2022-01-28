@@ -255,34 +255,48 @@ class DeviceManager(object):
     def load_device_config(self):
         if self.diagnostic_mode:
             print('load_device_config called for facilities {}'.format(self.facilities))
-
-        if self.local_config_file:
+        device_infos = []
+        if self.local_config_file:  # load devices from a local JSON file
             print('reading device manager config from local config file {}'.format(self.local_config_file))
             with open(self.local_config_file) as json_file:
                 site_info = json.loads(json_file.read())
-                return site_info['devices']
-
-        server_name = self.server_path
-        url = server_name + 'api/v1/facility/{}/devices'
-        
-        # All this is doing is "Ask the server for each facility's device list and combine them and return them" but all
-        # the error handling makes it look rather complicated.
-        device_infos = []
-        for facility_id in self.facilities:
-            received_facility_devices = False
-            while not received_facility_devices:
-                try:
-                    r = self.send_request(requests.get, url.format(facility_id))
-                    r.raise_for_status()
-                    device_infos += r.json()['devices']
-                    received_facility_devices = True
-                except Exception as ex:
-                    print('error requesting devices from server %s: %s' % (server_name, ex))
-                    gevent.sleep(120)
-
+                device_infos = site_info['devices']
+        else:  # load devices from the server
+            server_name = self.server_path
+            url = server_name + 'api/v1/facility/{}/devices'
+            for facility_id in self.facilities:
+                received_facility_devices = False
+                while not received_facility_devices:
+                    try:
+                        r = self.send_request(requests.get, url.format(facility_id))
+                        r.raise_for_status()
+                        device_infos += r.json()['devices']
+                        received_facility_devices = True
+                    except Exception as ex:
+                        print('error requesting devices from server %s: %s' % (server_name, ex))
+                        gevent.sleep(120)
         print('loaded %d devices from %s' % (len(device_infos), self.local_config_file if self.local_config_file else self.server_path))
-
         return device_infos
+
+    def load_automations(self):
+        print('loading automations')
+        all_automation_infos = []
+        for facility_id in self.facilities:
+            received_facility_automations = False
+            while not received_facility_automations:
+                try:
+                    url = self.server_path + 'api/v1/facility/%s/automations' % facility_id
+                    r = self.send_request(requests.get, url)
+                    r.raise_for_status()
+                    automation_infos = r.json()['automations']
+                    for automation_info in automation_infos:
+                        automation_info['facilityId'] = facility_id
+                    all_automation_infos += automation_infos
+                    received_facility_automations = True
+                except Exception as ex:
+                    print('error requesting automations from server %s: %s' % (self.server_path, ex))
+                    gevent.sleep(120)
+        return all_automation_infos
 
     def send_device_definition_to_server(self, device_info):
         assert not 'id' in device_info
@@ -399,26 +413,6 @@ class DeviceManager(object):
                 fail_count = 0
             now_str = datetime.datetime.now().strftime('%H:%M:%S')
             print('%s: sent %d updates; had %d failures' % (now_str, len(values_to_send), fail_count))
-
-    def load_automations(self):
-        print('loading automations')
-        all_automation_infos = []
-        for facility_id in self.facilities:
-            received_facility_automations = False
-            while not received_facility_automations:
-                try:
-                    url = self.server_path + 'api/v1/facility/%s/automations' % facility_id
-                    r = self.send_request(requests.get, url)
-                    r.raise_for_status()
-                    automation_infos = r.json()['automations']
-                    for automation_info in automation_infos:
-                        automation_info['facilityId'] = facility_id
-                    all_automation_infos += automation_infos
-                    received_facility_automations = True
-                except Exception as ex:
-                    print('error requesting automations from server %s: %s' % (self.server_path, ex))
-                    gevent.sleep(120)
-        return all_automation_infos
 
     def create_automation_on_server(self, automation_info):
         assert automation_info['facilityId'] in self.facilities
