@@ -1,19 +1,8 @@
 {
   "devices": [
     {
-      "id": 1000,
-      "name": "MyFakeUPS",
-      "type": "ups",
-      "make": "FakeUPSBrand",
-      "model": "FakeUPS9000",
-      "pollingInterval": 5,
-      "settings":
-      {
-        "local_sim": true
-      }
-    },
-    {
       "id": 1001,
+      "facilityId": 0,
       "name": "FakeRPi",
       "type": "server",
       "make": "Raspberry Pi",
@@ -25,21 +14,8 @@
       }
     },
     {
-      "id": 1002,
-      "name": "FakeRouter",
-      "type": "router",
-      "make": "InHand Networks",
-      "model": "IR915L",
-      "address": "101.101.101.101",
-      "pollingInterval": 5,
-      "settings": 
-      {
-        "password": "FakeRouterPassword",
-        "local_sim": true
-      }
-    },
-    {
       "id": 1003,
+      "facilityId": 0,
       "name": "FakeCBWRelay",
       "type": "relay",
       "make": "ControlByWeb",
@@ -54,6 +30,7 @@
     },
     {
       "id": 1004,
+      "facilityId": 0,
       "name": "FakeOmniSenseTempHumSensor",
       "type": "sensor",
       "parentId": 1006,
@@ -67,6 +44,7 @@
     },
     {
       "id": 1005,
+      "facilityId": 0,
       "name": "FakeOmniSenseTempHumSensor2",
       "type": "sensor",
       "parentId": 1006,
@@ -80,6 +58,7 @@
     },
     {
       "id": 1006,
+      "facilityId": 0,
       "name": "FakeOmniSenseHub",
       "type": "hub",
       "make": "OmniSense",
@@ -88,6 +67,7 @@
     },
     {
       "id": 1007,
+      "facilityId": 0,
       "name": "FakeModbusDevice",
       "type": "sensor",
       "make": "Blue Ion",
@@ -106,6 +86,7 @@
     },
     {
       "id": 1008,
+      "facilityId": 0,
       "name": "FakeSenseCapSensor",
       "type": "sensor",
       "make": "SenseCAP",
@@ -120,6 +101,7 @@
     },
     {
       "id": 1009,
+      "facilityId": 0,
       "name": "FakeDraginoSensor",
       "type": "sensor",
       "make": "Dragino",
@@ -134,6 +116,7 @@
     },
     {
       "id": 1010,
+      "facilityId": 0,
       "name": "FakeChirpstackHub",
       "type": "hub",
       "make": "SenseCAP",
@@ -149,6 +132,7 @@
     },
     {
       "id": 1011,
+      "facilityId": 0,
       "name": "FakeWeatherStation",
       "type": "sensor",
       "make": "WeatherFlow",
@@ -160,5 +144,7 @@
         "local_sim": false
       }
     }
+  ],
+  "automations": [
   ]
 }

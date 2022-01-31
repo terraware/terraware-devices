@@ -56,7 +56,7 @@ class DeviceManager(object):
         self.sent_alerts = {}  # used to keep track of which alerts have already been sent, so as to avoid sending duplicate alerts
         self.last_upload_time = time.time()  # used for watchdog
 
-        self.local_config_file = os.environ.get('LOCAL_CONFIG_FILE_OVERRIDE', None)
+        self.local_config_file = os.environ.get('LOCAL_SITE_FILE_OVERRIDE', None)
         self.local_sim = os.environ.get('LOCAL_SIM', False)
 
         self.server_path = os.environ.get('SERVER')
@@ -279,21 +279,27 @@ class DeviceManager(object):
     def load_automations(self):
         print('loading automations')
         all_automation_infos = []
-        for facility_id in self.facilities:
-            received_facility_automations = False
-            while not received_facility_automations:
-                try:
-                    url = self.server_path + 'api/v1/facility/%s/automations' % facility_id
-                    r = self.send_request(requests.get, url)
-                    r.raise_for_status()
-                    automation_infos = r.json()['automations']
-                    for automation_info in automation_infos:
-                        automation_info['facilityId'] = facility_id
-                    all_automation_infos += automation_infos
-                    received_facility_automations = True
-                except Exception as ex:
-                    print('error requesting automations from server %s: %s' % (self.server_path, ex))
-                    gevent.sleep(120)
+        if self.local_config_file:  # load devices from a local JSON file
+            print('reading device manager config from local config file {}'.format(self.local_config_file))
+            with open(self.local_config_file) as json_file:
+                site_info = json.loads(json_file.read())
+                all_automation_infos = site_info['automations']
+        else:
+            for facility_id in self.facilities:
+                received_facility_automations = False
+                while not received_facility_automations:
+                    try:
+                        url = self.server_path + 'api/v1/facility/%s/automations' % facility_id
+                        r = self.send_request(requests.get, url)
+                        r.raise_for_status()
+                        automation_infos = r.json()['automations']
+                        for automation_info in automation_infos:
+                            automation_info['facilityId'] = facility_id
+                        all_automation_infos += automation_infos
+                        received_facility_automations = True
+                    except Exception as ex:
+                        print('error requesting automations from server %s: %s' % (self.server_path, ex))
+                        gevent.sleep(120)
         return all_automation_infos
 
     def send_device_definition_to_server(self, device_info):
@@ -382,6 +388,8 @@ class DeviceManager(object):
                 })
 
     def send_timeseries_values_to_server(self):
+        if self.local_sim:
+            return
         server_name = self.server_path
         url = server_name + 'api/v1/timeseries/values'
         if len(self.timeseries_values_to_send) > 0:

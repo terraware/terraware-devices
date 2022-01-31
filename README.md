@@ -68,7 +68,7 @@ For local development:
 3.  Run `balena push [ip address]` where `[ip address]` is
     the Pi's local IP address (which you can obtain from the Balena web interface).
 
-For deployments to the production fleet:
+For deployments to a fleet:
 
 1.  Set these variables at the fleet level:
     *   `SERVER`
@@ -78,4 +78,15 @@ For deployments to the production fleet:
     *   `OFFLINE_REFRESH_TOKEN`
     *   `FACILITIES`
     *   `DIAGNOSTIC_MODE`
-3.  Run `balena push -m device-manager`
+3.  Run `balena push [fleet name]`
+
+## Local Testing without a Server
+
+You can run the device manager without using a server:
+
+1.  Set the following environment variables:
+    *   `LOCAL_SITE_FILE_OVERRIDE`: `sample-site.json`
+    *   `LOCAL_SIM`: `1`
+    *   `DIAGNOSTIC_MODE`: `1`
+    *   `FACILITIES`: `0`
+2.  Run `python main.py`
