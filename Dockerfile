@@ -40,7 +40,7 @@ COPY --from=build /app/entry.sh /app/entry.sh
 COPY --from=build /usr/local /usr/local
 RUN ldconfig
 
-COPY balena-config.yaml config.yaml *.py /app/
+COPY *.py /app/
 COPY specs /app/specs
 COPY devices /app/devices
 COPY automations /app/automations
