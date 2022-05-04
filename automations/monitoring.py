@@ -1,6 +1,27 @@
 from .base import TerrawareAutomation
 
 
+class EventMonitor(TerrawareAutomation):
+
+    def __init__(self, facility_id, name, config):
+        super().__init__(facility_id, name, config)
+        self.monitor_device_id = config['monitorDeviceId']
+        self.monitor_timeseries_name = config['monitorTimeseriesName']
+        self.prev_state = 0  # want to send alert if start up in alarm state
+
+    def run(self, device_manager):
+
+        # get alarm state
+        state = device_manager.last_value(self.monitor_device_id, self.monitor_timeseries_name)
+        if not state is None:
+
+            # if state changes, send notification
+            if state != self.prev_state:
+                message = self._name
+                device_manager.send_alert(self._facility_id, message, message, message)
+            self.prev_state = state
+
+
 class AlarmMonitor(TerrawareAutomation):
 
     def __init__(self, facility_id, name, config):
