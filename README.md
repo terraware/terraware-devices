@@ -53,6 +53,28 @@ The `parentId` parameter in a device's configuration causes it to get bound to t
 
 For hub/child relationships, right now the code is a little inconsistent: For OmniSense, the hub's `poll` returns all the timeseries values for all the child sensors, and so the hub device needs a valid `pollingInterval` value in its config, and the child sensors shouldn't be polled at all, but for ChirpStack, based on how the driver code was written (originally for homeassistant and I ported it over to the device manager) it was easier to have the child sensors return their data instead. There's no fundamental need to standardize one way or the other, but the inconsistency is bothersome. On the upside, it should be fine to just set all devices to be polled and some just never return any data.
 
+## Automations
+
+Automations are used to automate responses to various device data conditions.
+
+Each automation has the following fields:
+
+*   `id` (int): The ID of the automation record. 
+*   `facilityId` (int): The ID of the facility associated with the automation.
+*   `name` (string): A human-readable name of the automation. May be used in alert messages.
+*   `configuration` (JSON): Various type-specific attributes of an automation.
+
+The most commonly used automation is one that checks for bounds on a sensor value. It has the following configuration items:
+
+*   `type` (string): For this automation, the value should be `SensorBoundsAlert`.
+*   `monitorDeviceId` (int): The device ID of the device being monitored.
+*   `monitorTimeseriesName` (string): The time series name (within the device) being monitored. (For example: "temperature")
+*   `lowerThreshold` (float or null): The automation will send an alert if the sensor value is below this lower bound. 
+    If this threshold is `null`, no lower bound is in effect.
+*   `upperThreshold` (float or null): The automation will send an alert if the sensor value is above this upper bound.
+    If this threshold is `null`, no upper bound is in effect.
+*   `verbosity` (int): Can be set above zero to enable diagnostic logging; ordinarily should be set to zero.
+
 ## Balena Deployment
 
 General setup:
