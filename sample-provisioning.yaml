@@ -1,0 +1,3 @@
+auth_token: [put balena API key here]
+fleet_name: device-manager-prod
+balena_os_version: [use Balena OS version matching the downloaded image]
