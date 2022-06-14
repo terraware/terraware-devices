@@ -115,13 +115,19 @@ You can run the device manager without using a server:
 
 ## Bulk Provisioning
 
-To use the automated provisioning script you will need to have python installed. 
+Prerequisites:
 
-1.  Install `balenaEtcher` (or a similar program).
+*   Python 3 installed locally
+*   `balenaEtcher` (or a similar program) installed locally
+*   a local copy of this repo
+*   a Balena login
+*   an SD card reader/writer
+
+Additional setup steps:
+
+1.  Download a disk image from the Balena web interface.
 2.  Run `pip install balena-sdk pyyaml`
-3.  Download a disk image from the Balena web interface.
-4.  Close this repo.
-5.  In the `terraware-devices` directory, copy `sample-provisioning.yaml` to `provisioning.yaml` and edit it as needed. 
+3.  In the `terraware-devices` directory, copy `sample-provisioning.yaml` to `provisioning.yaml` and edit it as needed. 
     You will need a Balena API key (auth token), which can be obtained via the `Preferences` screen in the Balena web interface.
 
 For each SD card, perform the following steps:
