@@ -49,8 +49,8 @@ class SensorBoundsAlert(TerrawareAutomation):
         super().__init__(facility_id, name, config)
         self.monitor_device_id = config['monitorDeviceId']
         self.monitor_timeseries_name = config['monitorTimeseriesName']
-        self.lower_threshold = config['lowerThreshold']
-        self.upper_threshold = config['upperThreshold']
+        self.lower_threshold = config.get('lowerThreshold')
+        self.upper_threshold = config.get('upperThreshold')
         self.prev_value = None
 
     def run(self, device_manager):
