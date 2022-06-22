@@ -79,6 +79,27 @@ class DeviceManager(object):
         count_added = 0
         print('device list has information for %d device(s)' % len(device_infos))
 
+        # auto-add omnisense hub if needed
+        omnisense_hub_found = False
+        for dev_info in device_infos:
+            if dev_info['type'] == 'hub' and dev_info['make'] == 'OmniSense':
+                omnisense_hub_found = True
+        if not omnisense_hub_found:
+            dev_info = {
+              "facilityId": self.facilities[0],  # assume one facility for now
+              "name": "OmniSense Hub",
+              "type": "hub",
+              "make": "OmniSense",
+              "model": "G-4",
+              "settings": {},
+              "pollingInterval": 60
+            }
+            print('auto-adding OmniSense hub')
+            device_id = self.send_device_definition_to_server(dev_info)
+            print('successfully sent device info to server; new ID is: %d' % device_id)
+            dev_info['id'] = device_id
+            device_infos.append(dev_info)
+
         # Create the devices and hubs and save in a flat list
         for dev_info in device_infos:
             device = None
@@ -89,6 +110,9 @@ class DeviceManager(object):
                     if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
                         device_diagnostic_mode = dev_info['settings']['diagnosticMode']
                     device = device_class(dev_info, self.local_sim, device_diagnostic_mode)
+                    if hasattr(device, 'set_device_manager'):
+                        print('setting device manager on %s' % dev_info['name'])
+                        device.set_device_manager(self)
                     self.devices.append(device)
                     count_added += 1
                 else:

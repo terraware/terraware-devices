@@ -28,6 +28,7 @@ class OmniSenseHub(TerrawareHub):
         self.recent_sensor_data = {}
         self.address = None
         self.unknown_device_log = None
+        self.device_manager = None
         if self._diagnostic_mode:
             print("running OmniSenseHub in diagnostic mode")
 
@@ -39,6 +40,9 @@ class OmniSenseHub(TerrawareHub):
 
     def get_timeseries_definitions(self):
         return []
+
+    def set_device_manager(self, device_manager):
+        self.device_manager = device_manager
 
     def run_syslog_server(self):
         ip_address = current_ip_address()
@@ -67,6 +71,26 @@ class OmniSenseHub(TerrawareHub):
                         self.unknown_device_log = open('omni-devices.txt', 'w')
                     self.unknown_device_log.write('%s\n' % sensor_addr)
                     self.unknown_device_log.flush()
+                    if self.device_manager:
+                        print('creating new device')
+                        dev_info = {
+                            "facilityId": self.device_manager.facilities[0],
+                            "name": sensor_addr,
+                            "type": "sensor",
+                            "make": "OmniSense",
+                            "model": "S-11",  # assuming this model for now
+                            "address": sensor_addr,
+                            "pollingInterval": 10,
+                            "parentId": self.id
+                        }
+                        device_id = self.device_manager.send_device_definition_to_server(dev_info)
+                        dev_info['id'] = device_id
+                        device = OmniSenseTemperatureHumidityDevice(dev_info, False, False)
+                        self.device_manager.devices.append(device)
+                        self.add_device(device)
+                        timeseries_definitions = device.get_timeseries_definitions()
+                        self.device_manager.send_timeseries_definitions_to_server(timeseries_definitions)
+                        print('done')
 
     def poll(self):
         result = self.recent_sensor_data
