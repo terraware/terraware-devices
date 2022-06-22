@@ -118,9 +118,10 @@ You can run the device manager without using a server:
 Prerequisites:
 
 *   Python 3 installed locally
+*   Balena CLI installed locally
 *   `balenaEtcher` (or a similar program) installed locally
 *   a local copy of this repo
-*   a Balena login
+*   a Balena account/login
 *   an SD card reader/writer
 
 Additional setup steps:
@@ -134,7 +135,7 @@ For each SD card, perform the following steps:
 
 1.  If not done already, run `balena login`.
 2.  Use `balenaEtcher` (or a similar program) to copy the disk image to a fresh SD card.
-3.  Run `python provisioning.py`.
+3.  Run `sudo python provisioning.py`.
 4.  Write down the short code on the SD card container.
 
 Note that the SD card configuration step (carried out by the provisioning script) does not appear to work under Windows.
