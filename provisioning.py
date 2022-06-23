@@ -14,7 +14,7 @@ fleet_name = config['fleet_name']
 balena_os_version = config['balena_os_version']
 
 # generate a short code
-short_code = str(random.randint(100000, 999999))
+sensor_kit_id = str(random.randint(100000, 999999))
 
 # prepare API object
 print('Authenticating using token: %s...%s' % (auth_token[:3], auth_token[-3:]))
@@ -38,8 +38,8 @@ print('Generated device UUID: %s...' % device_uuid[:6])
 # register device
 print('Registering device to fleet: %s' % fleet_name)
 balena.models.device.register(fleet_id, device_uuid)
-balena.models.device.rename(device_uuid, short_code)
-balena.models.tag.device.set(device_uuid, 'short_code', short_code)
+balena.models.device.rename(device_uuid, sensor_kit_id)
+balena.models.tag.device.set(device_uuid, 'sensor_kit_id', sensor_kit_id)
 
 # generate config file for SD card
 # TODO: can we just write the device UUID to the config file? would be nice to avoid specifying balena_os_version
@@ -52,4 +52,4 @@ print('Copying config file to SD card.')
 os.system('balena config inject balena-config.json')
 
 # display short code for user
-print('Short code: %s' % short_code)
+print('Sensor Kit ID: %s' % sensor_kit_id)
