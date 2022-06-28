@@ -14,7 +14,7 @@ from .base import TerrawareDevice, TerrawareHub
 
 class ModbusDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
+    def __init__(self, dev_info, local_sim, diagnostic_mode, load_spec=True):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._host = dev_info["address"]
         self._unit = 1  # aka modbus slave number
@@ -34,14 +34,14 @@ class ModbusDevice(TerrawareDevice):
         self._modbus_client = ModbusTcpClient(self._host, port=port, framer=framer)
         self._seq_infos = []
 
-        spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/../specs'
-        spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
-
-        # load seqeuence info
-        with open(spec_file_name) as csvfile:
-            lines = csv.DictReader(csvfile)
-            for line in lines:
-                self._seq_infos.append(line)
+        # load register info for this device make/model
+        if load_spec:
+            spec_path = str(pathlib.Path(__file__).parent.absolute()) + '/../specs'
+            spec_file_name = spec_path + '/' + dev_info['make'] + '_' + dev_info['model'] + '.csv'
+            with open(spec_file_name) as csvfile:
+                lines = csv.DictReader(csvfile)
+                for line in lines:
+                    self._seq_infos.append(line)
 
         print('created modbus device (%s:%d, unit: %d)' % (self._host, port, self._unit))
 
