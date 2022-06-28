@@ -64,6 +64,7 @@ class DeviceManager(object):
         self.api_client_id = os.environ.get('KEYCLOAK_API_CLIENT_ID')
         self.offline_refresh_token = os.environ.get('OFFLINE_REFRESH_TOKEN')
         self.access_token_request_url = os.environ.get('ACCESS_TOKEN_REQUEST_URL')
+        self.max_values_to_send = os.environ.get('MAX_VALUES_TO_SEND', 1000)
 
         facilities_string = os.environ.get('FACILITIES', None)
         self.facilities = [int(a) for a in facilities_string.split(',')] if facilities_string else []
@@ -80,25 +81,26 @@ class DeviceManager(object):
         print('device list has information for %d device(s)' % len(device_infos))
 
         # auto-add omnisense hub if needed
-        omnisense_hub_found = False
-        for dev_info in device_infos:
-            if dev_info['type'] == 'hub' and dev_info['make'] == 'OmniSense':
-                omnisense_hub_found = True
-        if not omnisense_hub_found:
-            dev_info = {
-              "facilityId": self.facilities[0],  # assume one facility for now
-              "name": "OmniSense Hub",
-              "type": "hub",
-              "make": "OmniSense",
-              "model": "G-4",
-              "settings": {},
-              "pollingInterval": 60
-            }
-            print('auto-adding OmniSense hub')
-            device_id = self.send_device_definition_to_server(dev_info)
-            print('successfully sent device info to server; new ID is: %d' % device_id)
-            dev_info['id'] = device_id
-            device_infos.append(dev_info)
+        if False:
+            omnisense_hub_found = False
+            for dev_info in device_infos:
+                if dev_info['type'] == 'hub' and dev_info['make'] == 'OmniSense':
+                    omnisense_hub_found = True
+            if not omnisense_hub_found:
+                dev_info = {
+                  "facilityId": self.facilities[0],  # assume one facility for now
+                  "name": "OmniSense Hub",
+                  "type": "hub",
+                  "make": "OmniSense",
+                  "model": "G-4",
+                  "settings": {},
+                  "pollingInterval": 60
+                }
+                print('auto-adding OmniSense hub')
+                device_id = self.send_device_definition_to_server(dev_info)
+                print('successfully sent device info to server; new ID is: %d' % device_id)
+                dev_info['id'] = device_id
+                device_infos.append(dev_info)
 
         # Create the devices and hubs and save in a flat list
         for dev_info in device_infos:
@@ -344,6 +346,12 @@ class DeviceManager(object):
         r = self.send_request(requests.put, url, upload_device_info)
         r.raise_for_status()
 
+    # NOTE: this isn't implemented on the back end, but would be useful to have at some point
+    def delete_device_definition_on_server(self, device_id):
+        print('device device info for device %s' % device_id)
+        r = self.send_request(requests.delete, self.server_path + 'api/v1/devices/%s' % device_id, {})
+        r.raise_for_status()
+
     def send_timeseries_definitions_to_server(self, timeseries_definitions):
         if self.diagnostic_mode:
             print('=== SEND TIMESERIES DEFINITIONS TO SERVER - values received: ===')
@@ -410,6 +418,10 @@ class DeviceManager(object):
                         'value': str(scalar_value)
                     }]
                 })
+
+        # limit total number of time series value stored/sent
+        if len(self.timeseries_values_to_send) > self.max_values_to_send:
+            self.timeseries_values_to_send = self.timeseries_values_to_send[-self.max_values_to_send:]
 
     def send_timeseries_values_to_server(self):
         if self.local_sim:

@@ -11,6 +11,8 @@ if __name__ == '__main__':
                       help="upload device specs from local JSON file to back end server")
     parser.add_option("-a", "--upload_automations", dest="upload_automations",
                       help="upload facility automations from local JSON file to back end server")
+    parser.add_option("-r", "--remove_device", dest="remove_device",
+                      help="delete the specified device")
     d = DeviceManager()
     (options, args) = parser.parse_args()
     if options.get_facility_info:
@@ -50,6 +52,8 @@ if __name__ == '__main__':
                 d.update_automation_on_server(automation)
             else:
                 d.create_automation_on_server(automation)
+    elif options.remove_device:
+        d.delete_device_definition_on_server(options.remove_device)
     else:
         d.create_devices(d.load_device_config())
         d.create_automations(d.load_automations())
