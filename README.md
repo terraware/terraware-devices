@@ -140,3 +140,16 @@ For each SD card, perform the following steps:
 
 Note that the SD card configuration step (carried out by the provisioning script) does not appear to work under Windows.
 Let us know if you need an approach that works under Windows.
+
+## Modbus Testing
+
+Use the Balena admin interface to open a terminal session in the `main` service.
+
+If you'd like to ping a device run the following:
+
+1.  apt install iptools-ping
+2.  ping 192.168.2.50
+
+If you'd like to check a modbus register, run this: `python modtest.py -a 192.168.2.50 -r 70 -t uint16`
+
+Run `python modtest.py -h` for more options.
