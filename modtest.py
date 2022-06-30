@@ -28,17 +28,17 @@ if __name__ == '__main__':
             'name': 'test',
             'facilityId': 0,
             'address': options.address,
-            'port': options.port,
+            'port': int(options.port),
             'settings': {
-                'unit': options.unit,
-                'holding': options.holding,
-                'rtu-over-tcp': options.rtu,
+                'unit': int(options.unit),
+                'holding': int(options.holding),
+                'rtu-over-tcp': int(options.rtu),
             }
         }
         try:
             device = ModbusDevice(device_info, local_sim=False, diagnostic_mode=True, load_spec=False)
-            value = device.read_register(options.register, options.data_type, options.unit)
-            print('value: %d' % value)
+            value = device.read_register(int(options.register), options.data_type, int(options.unit))
+            print('value: %s' % value)
         except Exception as e:
             print(e)
     else:
