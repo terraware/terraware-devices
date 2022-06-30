@@ -36,6 +36,7 @@ class TempestWeatherStation(TerrawareDevice):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
+        self.expected_update_interval = 60 * 60  # used for watchdog
         if self._diagnostic_mode:
             print("running TempestWeatherStation in diagnostic mode")
         self._state = {}
@@ -70,7 +71,15 @@ class TempestWeatherStation(TerrawareDevice):
             print("Invalid weather data")
 
     def get_timeseries_definitions(self):
-        return [[self.id, a, 'numeric', 2] for a in SENSOR_TYPES]
+        defs = []
+        for series_name in SENSOR_TYPES:
+            data_type = 'Numeric'
+            decimal_places = 2
+            if series_name == 'wind_direction':
+                data_type = 'Text'
+                decimal_places = 0
+            defs.append([self.id, series_name, data_type, decimal_places])
+        return defs
 
     def poll(self):
         result = self._state

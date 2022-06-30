@@ -46,7 +46,7 @@ class ModbusDevice(TerrawareDevice):
         print('created modbus device (%s:%d, unit: %d)' % (self._host, port, self._unit))
 
     def get_timeseries_definitions(self):
-        return [[self.id, sequence['name'], 'numeric', 2] for sequence in self._seq_infos]
+        return [[self.id, sequence['name'], 'Numeric', 2] for sequence in self._seq_infos]
 
     def reconnect(self):
         self._modbus_client.close()

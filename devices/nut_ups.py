@@ -127,7 +127,7 @@ class NutUpsDevice(TerrawareDevice):
             print(poll_upsc(self.id))
 
     def get_timeseries_definitions(self):
-        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['ups_status', 'battery_charge']]
+        return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['ups_status', 'battery_charge']]
 
     def reconnect(self):
         pass

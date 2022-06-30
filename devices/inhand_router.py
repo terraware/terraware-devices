@@ -61,7 +61,7 @@ class InHandRouterDevice(TerrawareDevice):
         print('created InHandRouterDevice with address %s' % self._address)
 
     def get_timeseries_definitions(self):
-        return [[self.id, 'signal_strength', 'numeric', 2]]
+        return [[self.id, 'signal_strength', 'Numeric', 2]]
 
     def reconnect(self):
         pass

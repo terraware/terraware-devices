@@ -18,7 +18,7 @@ class CBWRelayDevice(TerrawareDevice):
         print('created relay device (%s:%d)' % (self._host, self._port))
 
     def get_timeseries_definitions(self):
-        return [[self.id, 'relay-1', 'numeric', 2]]
+        return [[self.id, 'relay-1', 'Numeric', 2]]
 
     def reconnect(self):
         pass
@@ -63,7 +63,7 @@ class CBWWeatherStationDevice(TerrawareDevice):
         print('created CBW weather station device (%s:%d)' % (self._host, self._port))
 
     def get_timeseries_definitions(self):
-        return [[self.id, name, 'numeric', 2] for name in self.fields]
+        return [[self.id, name, 'Numeric', 2] for name in self.fields]
 
     def reconnect(self):
         pass

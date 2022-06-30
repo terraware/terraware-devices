@@ -11,8 +11,8 @@ class MockSensorDevice(TerrawareDevice):
 
     def get_timeseries_definitions(self):
         return [
-            [self.id, 'value_a', 'numeric', 2],
-            [self.id, 'value_b', 'numeric', 2],
+            [self.id, 'value_a', 'Numeric', 2],
+            [self.id, 'value_b', 'Numeric', 2],
         ]
 
     def reconnect(self):

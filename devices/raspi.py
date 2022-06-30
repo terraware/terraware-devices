@@ -29,7 +29,7 @@ class RasPiDevice(TerrawareDevice):
         for name in ['sdcard']:
             for counter_name in ['read_bytes', 'read_time', 'write_bytes', 'write_time', 'busy_time']:
                 timeseries_names.append(f'disk_{name}_{counter_name}')
-        return [[self.id, x, 'numeric', 2] for x in timeseries_names]
+        return [[self.id, x, 'Numeric', 2] for x in timeseries_names]
 
     def poll(self):
         if self._local_sim:

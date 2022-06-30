@@ -130,7 +130,7 @@ class OmniSenseTemperatureHumidityDevice(TerrawareDevice):
     # the definitions. (It would also be fine if the hub object replied with a list of all of these in its; it's just
     # easier to implement here.)
     def get_timeseries_definitions(self):
-        return [[self.id, timeseries_name, 'numeric', 2] for timeseries_name in ['temperature', 'humidity']]
+        return [[self.id, timeseries_name, 'Numeric', 2] for timeseries_name in ['temperature', 'humidity']]
 
     # not used; polling is done in hub class
     def poll(self):
