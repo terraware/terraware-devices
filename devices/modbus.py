@@ -18,6 +18,8 @@ class ModbusDevice(TerrawareDevice):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._host = dev_info["address"]
         self._unit = 1  # aka modbus slave number
+        if not self._polling_interval:
+            self._polling_interval = 60
 
         self._read_holding = False
         rtu_over_tcp = False

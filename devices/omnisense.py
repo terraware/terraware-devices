@@ -29,6 +29,8 @@ class OmniSenseHub(TerrawareHub):
         self.address = None
         self.unknown_device_log = None
         self.device_manager = None
+        if not self._polling_interval:
+            self._polling_interval = 60
         if self._diagnostic_mode:
             print("running OmniSenseHub in diagnostic mode")
 
