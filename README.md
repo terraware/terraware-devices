@@ -147,7 +147,7 @@ Use the Balena admin interface to open a terminal session in the `main` service.
 
 If you'd like to ping a device run the following:
 
-1.  apt install iptools-ping
+1.  apt install iputils-ping
 2.  ping 192.168.2.50
 
 If you'd like to check a modbus register, run this: `python modtest.py -a 192.168.2.50 -r 70 -t uint16`
