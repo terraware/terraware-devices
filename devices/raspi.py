@@ -15,6 +15,7 @@ class RasPiDevice(TerrawareDevice):
         self._last_poll_time = None
         self._polled = False
         self._start_time = time.time()
+        self._polling_interval = 60
         print('created RasPiDevice')
 
     def reconnect(self):

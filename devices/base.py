@@ -33,7 +33,7 @@ class TerrawareDevice(ABC):
         self.facility_id = dev_info['facilityId']
         self.last_update_time = time.time()  # used for watchdog; don't know when last update was on startup
         self.expected_update_interval = 5 * 60  # used for watchdog
-        self._polling_interval = 0  # 0 means "do not poll this device"
+        self._polling_interval = None  # we won't poll the device unless the device class specifies a polling interval
 
         # By default we use the global local_sim setting, but they can override it either way in the device's settings itself.
         self._local_sim = local_sim
@@ -42,7 +42,6 @@ class TerrawareDevice(ABC):
             local_sim_override = settings_items.get("local_sim")
             if local_sim_override is not None:
                 self._local_sim = local_sim_override
-            self._polling_interval = settings_items.get("pollingInterval", 0)
 
         self._diagnostic_mode = diagnostic_mode
         self._parent_id = dev_info.get("parentId")
@@ -62,8 +61,11 @@ class TerrawareDevice(ABC):
     @property
     def polling_interval(self):
         return self._polling_interval
-    
-    
+
+    def set_polling_interval(self, polling_interval):
+        self._polling_interval = polling_interval
+
+
 class TerrawareHub(TerrawareDevice):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode):

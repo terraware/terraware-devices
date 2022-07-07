@@ -187,6 +187,7 @@ def local_ip_address_visible_to_target(target_ip_address):
     except Exception as e:
         print('ChirpStack failed to find local IP address to give to target gateway; exception [{}]'.format(e))
 
+
 class LoRaSensor(TerrawareDevice):
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
@@ -194,6 +195,7 @@ class LoRaSensor(TerrawareDevice):
         """Initialize the sensor."""
         self._address = dev_info['address']
         self._state = {}
+        self._polling_interval = 10  # we don't actually poll these sensors; this just specifies how often the device manager retrieves values stored in this class
 
     def set_state(self, timeseries, value):
         self._state[(self.id, timeseries)] = value

@@ -112,8 +112,11 @@ class DeviceManager(object):
                     if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
                         device_diagnostic_mode = dev_info['settings']['diagnosticMode']
                     device = device_class(dev_info, self.local_sim, device_diagnostic_mode)
+                    if 'settings' in dev_info and 'pollingInterval' in dev_info['settings']:  # allow overriding device polling interval
+                        device.set_polling_interval(dev_info['settings']['pollingInterval'])
+                        print('setting polling interval on device %s to %.2f' % (device.name, device.polling_interval))
                     if hasattr(device, 'set_device_manager'):
-                        print('setting device manager on %s' % dev_info['name'])
+                        print('setting device manager on %s' % device.name)
                         device.set_device_manager(self)
                     self.devices.append(device)
                     count_added += 1

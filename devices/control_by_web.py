@@ -15,6 +15,7 @@ class CBWRelayDevice(TerrawareDevice):
         self._host = dev_info["address"]
         self._port = dev_info["port"]
         self._sim_state = 0
+        self._polling_interval = 60
         print('created relay device (%s:%d)' % (self._host, self._port))
 
     def get_timeseries_definitions(self):
@@ -59,6 +60,7 @@ class CBWWeatherStationDevice(TerrawareDevice):
         self._host = dev_info["address"]
         self._port = dev_info["port"]
         self._sim_state = 0
+        self._polling_interval = 60
         self.fields = ['temp', 'humidity', 'windSpd', 'windDir', 'rainTot', 'solarRad', 'barPressure', 'dewPoint']
         print('created CBW weather station device (%s:%d)' % (self._host, self._port))
 
@@ -115,6 +117,7 @@ class CBWSensorHub(TerrawareHub):
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.address = dev_info["address"]
+        self._polling_interval = 60
 
     # This code appears to be unused, since poll never returns anything...
     def get_timeseries_definitions(self):

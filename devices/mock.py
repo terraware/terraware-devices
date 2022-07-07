@@ -7,6 +7,7 @@ class MockSensorDevice(TerrawareDevice):
 
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
+        self._polling_interval = 10
         print('created MockSensorDevice')
 
     def get_timeseries_definitions(self):

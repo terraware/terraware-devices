@@ -49,6 +49,7 @@ class InHandRouterDevice(TerrawareDevice):
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self._address = dev_info["address"]
+        self._polling_interval = 60
         self._username = "adm"
 
         self._password = ""

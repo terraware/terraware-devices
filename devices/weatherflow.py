@@ -37,6 +37,7 @@ class TempestWeatherStation(TerrawareDevice):
     def __init__(self, dev_info, local_sim, diagnostic_mode):
         super().__init__(dev_info, local_sim, diagnostic_mode)
         self.expected_update_interval = 60 * 60  # used for watchdog
+        self._polling_interval = 60  # we don't actually poll the weather station; this just specifies how often the device manager retrieves values stored in this class
         if self._diagnostic_mode:
             print("running TempestWeatherStation in diagnostic mode")
         self._state = {}

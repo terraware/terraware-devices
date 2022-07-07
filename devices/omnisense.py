@@ -29,8 +29,7 @@ class OmniSenseHub(TerrawareHub):
         self.address = None
         self.unknown_device_log = None
         self.device_manager = None
-        if not self._polling_interval:
-            self._polling_interval = 60
+        self._polling_interval = 60  # we don't actually poll these sensors; this just specifies how often the device manager retrieves values stored in this class
         if self._diagnostic_mode:
             print("running OmniSenseHub in diagnostic mode")
 
