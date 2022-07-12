@@ -1,2 +1,3 @@
 name,type,scale_factor,address,send_to_server
 relative_state_of_charge,uint16,1,843,1
+system_power,uint16,1,817,1
