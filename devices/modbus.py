@@ -102,4 +102,5 @@ class ModbusDevice(TerrawareDevice):
                 v = v - 0x100000000
             return v
         else:
+            print('unrecognized register data type: %s' % register_type)
             return None
