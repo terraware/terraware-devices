@@ -96,11 +96,20 @@ For deployments to a fleet:
     *   `SERVER`
     *   `ACCESS_TOKEN_REQUEST_URL`
     *   `KEYCLOAK_API_CLIENT_ID`
-2.  Set these variables at the device level:
+2.  Set these variables at the device level (unless using the provisioning system described below):
     *   `OFFLINE_REFRESH_TOKEN`
     *   `FACILITIES`
     *   `DIAGNOSTIC_MODE`
 3.  Run `balena push [fleet name]`
+
+We typically use the following steps for deployment:
+
+1.  Run `balena push device-manager-alpha`
+2.  Check logs of `device-manager-alpha` systems in the Balena web interface
+3.  Run `balena push device-manager-beta`
+4.  Check logs of `device-manager-beta` systems in the Balena web interface
+5.  Run `balena push device-manager-prod`
+6.  Check logs of `device-manager-prod` systems in the Balena web interface
 
 ## Local Testing without a Server
 
