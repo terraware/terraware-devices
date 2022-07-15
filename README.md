@@ -135,7 +135,7 @@ Prerequisites:
 
 Additional setup steps:
 
-1.  Download a disk image from the Balena web interface.
+1.  Download a disk image from the Balena web interface. (Go to a fleet and select "Add Device")
 2.  Run `pip install balena-sdk pyyaml`
 3.  In the `terraware-devices` directory, copy `sample-provisioning.yaml` to `provisioning.yaml` and edit it as needed. 
     You will need a Balena API key (auth token), which can be obtained via the `Preferences` screen in the Balena web interface.
