@@ -290,7 +290,7 @@ class DeviceManager(object):
                 device_infos = site_info['devices']
         else:  # load devices from the server
             server_name = self.server_path
-            url = server_name + 'api/v1/facility/{}/devices'
+            url = server_name + 'api/v1/facilities/{}/devices'
             for facility_id in self.facilities:
                 received_facility_devices = False
                 while not received_facility_devices:
@@ -318,7 +318,7 @@ class DeviceManager(object):
                 received_facility_automations = False
                 while not received_facility_automations:
                     try:
-                        url = self.server_path + 'api/v1/facility/%s/automations' % facility_id
+                        url = self.server_path + 'api/v1/facilities/%s/automations' % facility_id
                         r = self.send_request(requests.get, url)
                         r.raise_for_status()
                         automation_infos = r.json()['automations']
@@ -462,7 +462,7 @@ class DeviceManager(object):
     def create_automation_on_server(self, automation_info):
         assert automation_info['facilityId'] in self.facilities
         assert not 'id' in automation_info
-        url = self.server_path + 'api/v1/facility/%s/automations' % automation_info['facilityId']
+        url = self.server_path + 'api/v1/facilities/%s/automations' % automation_info['facilityId']
         print('creating automation %s with type %s' % (automation_info['name'], automation_info['configuration']['type']))
         print(automation_info)
         upload_automation_info = automation_info.copy()
@@ -473,7 +473,7 @@ class DeviceManager(object):
 
     def update_automation_on_server(self, automation_info):
         assert automation_info['facilityId'] in self.facilities
-        url = self.server_path + 'api/v1/facility/%s/automations/%s' % (automation_info['facilityId'], automation_info['id'])
+        url = self.server_path + 'api/v1/facilities/%s/automations/%s' % (automation_info['facilityId'], automation_info['id'])
         upload_automation_info = automation_info.copy()
         del upload_automation_info['facilityId']  # IDs goes in URL, not payload
         del upload_automation_info['id']
@@ -492,7 +492,7 @@ class DeviceManager(object):
         if not already_sent:
             assert facility_id in self.facilities
             print('sending alert for facility: %s, subject: %s' % (facility_id, subject))
-            url = self.server_path + 'api/v1/facility/%s/alert/send' % facility_id
+            url = self.server_path + 'api/v1/facilities/%s/alert/send' % facility_id
             payload = {'subject': subject, 'body': body}
             r = self.send_request(requests.post, url, payload)
             r.raise_for_status()
