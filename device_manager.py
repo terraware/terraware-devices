@@ -482,7 +482,7 @@ class DeviceManager(object):
         r = self.send_request(requests.put, url, upload_automation_info)
         r.raise_for_status()
 
-    def send_alert(self, facility_id, label, subject, body):
+    def send_alert(self, facility_id, label, subject, body, avoid_resend=True):
         already_sent = False
         if (facility_id, label) in self.sent_alerts:
             last_sent_time = self.sent_alerts[(facility_id, label)]
@@ -496,7 +496,8 @@ class DeviceManager(object):
             payload = {'subject': subject, 'body': body}
             r = self.send_request(requests.post, url, payload)
             r.raise_for_status()
-            self.sent_alerts[(facility_id, label)] = time.time()
+            if avoid_resend:
+                self.sent_alerts[(facility_id, label)] = time.time()
 
     def clear_alert(self, facility_id, label):
         key = (facility_id, label)

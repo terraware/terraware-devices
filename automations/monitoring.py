@@ -18,7 +18,7 @@ class EventMonitor(TerrawareAutomation):
             # if state changes, send notification
             if state != self.prev_state:
                 message = self._name
-                device_manager.send_alert(self._facility_id, message, message, message)
+                device_manager.send_alert(self._facility_id, message, message, message, avoid_resend=False)
             self.prev_state = state
 
 
@@ -37,9 +37,9 @@ class AlarmMonitor(TerrawareAutomation):
         if not state is None:
 
             # if transition to alarm state, send notification
-            if state and not self.prev_state:
+            if state and (not self.prev_state):
                 message = self._name
-                device_manager.send_alert(self._facility_id, message, message, message)
+                device_manager.send_alert(self._facility_id, message, message, message, avoid_resend=False)
             self.prev_state = state
 
 
