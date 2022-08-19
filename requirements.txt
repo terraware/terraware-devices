@@ -8,6 +8,9 @@ gevent>=20.9
 # pymodbus bumps its minor version number for each release
 pymodbus~=2.4
 
+# needed for chirpstack API; later versions have compatibility issue
+protobuf==3.20.0
+
 # chirpstack API for LoRa devices
 chirpstack-api>=3.11.0
 
