@@ -239,7 +239,7 @@ class DeviceManager(object):
     def find_device(self, device_id):
         device = None
         for d in self.devices:
-            if d.id() == device_id:
+            if d.id == device_id:
                 device = d
         return device
 

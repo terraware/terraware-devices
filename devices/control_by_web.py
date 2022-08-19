@@ -16,6 +16,7 @@ class CBWRelayDevice(TerrawareDevice):
         self._port = dev_info["port"]
         self._sim_state = 0
         self._polling_interval = 60
+        self._verbosity = dev_info.get('verbosity', 0)
         print('created relay device (%s:%d)' % (self._host, self._port))
 
     def get_timeseries_definitions(self):
@@ -25,8 +26,11 @@ class CBWRelayDevice(TerrawareDevice):
         pass
 
     def poll(self):
+        state = self.read_state()
+        if self._verbosity:
+            print(f'relay state: {state}')
         return {
-            (self.id, 'relay-1'): self.read_state(),
+            (self.id, 'relay-1'): state,
         }
 
     def read_state(self):
