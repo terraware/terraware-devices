@@ -93,8 +93,7 @@ class DeviceManager(object):
                   "type": "hub",
                   "make": "OmniSense",
                   "model": "G-4",
-                  "settings": {},
-                  "pollingInterval": 60
+                  "settings": {}
                 }
                 print('auto-adding OmniSense hub')
                 device_id = self.send_device_definition_to_server(dev_info)

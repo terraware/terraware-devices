@@ -81,7 +81,6 @@ class OmniSenseHub(TerrawareHub):
                             "make": "OmniSense",
                             "model": "S-11",  # assuming this model for now
                             "address": sensor_addr,
-                            "pollingInterval": 10,
                             "parentId": self.id
                         }
                         device_id = self.device_manager.send_device_definition_to_server(dev_info)
