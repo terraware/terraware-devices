@@ -118,8 +118,8 @@ def poll_upsc(device_id):
 
 class NutUpsDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self._polling_interval = 60
 
         if not self._local_sim:

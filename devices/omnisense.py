@@ -20,8 +20,8 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
 
 class OmniSenseHub(TerrawareHub):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         global hub_instance
         assert hub_instance is None
         hub_instance = self
@@ -30,8 +30,6 @@ class OmniSenseHub(TerrawareHub):
         self.unknown_device_log = None
         self.device_manager = None
         self._polling_interval = 60  # we don't actually poll these sensors; this just specifies how often the device manager retrieves values stored in this class
-        if self._diagnostic_mode:
-            print("running OmniSenseHub in diagnostic mode")
 
     def notify_all_devices_added(self):
         if self._local_sim:
@@ -120,8 +118,8 @@ class OmniSenseHub(TerrawareHub):
 
 class OmniSenseTemperatureHumidityDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self.sensor_addr = dev_info["address"]
         self.expected_update_interval = 30 * 60
         print('created OmniSenseTemperatureHumidityDevice with id %s' % self.sensor_addr)

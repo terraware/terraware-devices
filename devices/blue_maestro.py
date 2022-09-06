@@ -111,8 +111,8 @@ def standard_scan(iface=0, timeout=2, verbose=False):
 ########################################################################################################
 class BlueMaestroDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self._label = dev_info["address"] # ID from the sticker on the blue maestro device
         print('created BlueMaestroDevice with label %s' % label)
 

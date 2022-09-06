@@ -34,11 +34,11 @@ test_message = '{"serial_number":"ST-00051516","type":"obs_st","hub_sn":"HB-0004
 
 class TempestWeatherStation(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self.expected_update_interval = 60 * 60  # used for watchdog
         self._polling_interval = 60  # we don't actually poll the weather station; this just specifies how often the device manager retrieves values stored in this class
-        if self._diagnostic_mode:
+        if self._verbosity:
             print("running TempestWeatherStation in diagnostic mode")
         self._state = {}
         if self._local_sim:
@@ -50,7 +50,7 @@ class TempestWeatherStation(TerrawareDevice):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.bind((UDP_IP, UDP_PORT))
             gevent.spawn(self.run)
-            if self._diagnostic_mode:
+            if self._verbosity:
                 print("started weather station UDP receiver")
 
     def run(self):
@@ -66,7 +66,7 @@ class TempestWeatherStation(TerrawareDevice):
             for sensor_type in SENSOR_TYPES:
                 if hasattr(dataset, sensor_type):
                     self._state[(self.id, sensor_type)] = getattr(dataset, sensor_type)
-            if self._diagnostic_mode:
+            if self._verbosity:
                 print("Weather data received: %s %s %s" % (dataset.type, dataset.timestamp, dataset.temperature))
         else:
             print("Invalid weather data")

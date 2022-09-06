@@ -52,10 +52,10 @@ class ChirpStackUplinkHandler(BaseHTTPRequestHandler):
         return Parse(body, pl)
 
 class ChirpStackHub(TerrawareHub):
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
-        if self._diagnostic_mode:
-            print('running ChirpStackHub in diagnostic mode')
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
+        if self._verbosity:
+            print('running ChirpStackHub in verbose mode')
 
         global hub_instance
         assert hub_instance is None
@@ -74,11 +74,11 @@ class ChirpStackHub(TerrawareHub):
 
     def notify_all_devices_added(self):
         if self._local_sim:
-            if self._diagnostic_mode:
+            if self._verbosity:
                 print('ChirpStackHub got notification all children added, spawning local simulation')
             gevent.spawn(self.sim)
         else:
-            if self._diagnostic_mode:
+            if self._verbosity:
                 print('ChirpStackHub got notification all children added, spawning chirpstack listening service')
             gevent.spawn(self.run_chirpstack_listener)
 
@@ -189,8 +189,8 @@ def local_ip_address_visible_to_target(target_ip_address):
 
 
 class LoRaSensor(TerrawareDevice):
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
 
         """Initialize the sensor."""
         self._address = dev_info['address']
@@ -235,8 +235,8 @@ class LoRaSensor(TerrawareDevice):
 # Note: since this sensor sends separate uplinks for the temp & moisture payloads, both sensor types will get both,
 # just ignore the payloads that aren't for us        
 class SenseCapSoilSensor(LoRaSensor):
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytearray):
@@ -265,8 +265,8 @@ class SenseCapSoilSensor(LoRaSensor):
 # 2 bytes: soil conductivity - dev 0-20,000 (or greater, it says, strangely) - value is in uS/cm
 # 1 byte: digital interrupt (optional)
 class DraginoSoilSensor(LoRaSensor):
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytes):
@@ -291,8 +291,8 @@ class DraginoSoilSensor(LoRaSensor):
 
 class DraginoLeakSensor(LoRaSensor):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytes):
@@ -308,7 +308,7 @@ class DraginoLeakSensor(LoRaSensor):
                 self.set_state('leak status', leak_status)
                 self.set_state('total leak count', leak_count)
                 self.set_state('total leak duration', leak_duration)  # minutes
-                if self._diagnostic_mode:
+                if self._verbosity:
                     print('batt: %.2f, status: %d, count: %d, minutes: %d' % (batt_volts, leak_status, leak_count, leak_duration))
 
     def get_timeseries_definitions(self):
@@ -322,8 +322,8 @@ class DraginoLeakSensor(LoRaSensor):
 
 class BoveFlowSensor(LoRaSensor):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self.expected_update_interval = 24 * 60 * 60  # expect at least one update a day
 
     def receive_payload(self, payload: bytes):
@@ -331,7 +331,7 @@ class BoveFlowSensor(LoRaSensor):
         if message.startswith('810a901f'):
             flow = int(payload[9:5:-1].hex())  # assuming simple binary coded decimal
             self.set_state('flow', flow)
-            if self._diagnostic_mode:
+            if self._verbosity:
                 print('flow: %d' % flow)
 
     def get_timeseries_definitions(self):

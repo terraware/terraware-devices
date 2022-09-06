@@ -27,7 +27,7 @@ class TerrawareDevice(ABC):
         to be the id of this device, for hubs that return the timeseries values of their child devices."""
         ...
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
+    def __init__(self, dev_info):
         self._id = dev_info["id"]
         self._name = dev_info["name"]
         self.facility_id = dev_info['facilityId']
@@ -35,15 +35,13 @@ class TerrawareDevice(ABC):
         self.expected_update_interval = 5 * 60  # used for watchdog
         self._polling_interval = None  # we won't poll the device unless the device class specifies a polling interval
 
-        # By default we use the global local_sim setting, but they can override it either way in the device's settings itself.
-        self._local_sim = local_sim
-        settings_items = dev_info.get("settings")
-        if settings_items:
-            local_sim_override = settings_items.get("local_sim")
-            if local_sim_override is not None:
-                self._local_sim = local_sim_override
+        self._local_sim = False
+        if 'settings' in dev_info:
+            settings = dev_info['settings']
+            if 'local_sim' in settings:
+                self._local_sim = settings['local_sim']
 
-        self._diagnostic_mode = diagnostic_mode
+        self._verbosity = dev_info.get("verbosity", 0)
         self._parent_id = dev_info.get("parentId")
 
     @property
@@ -62,14 +60,17 @@ class TerrawareDevice(ABC):
     def polling_interval(self):
         return self._polling_interval
 
+    def set_local_sim(self, local_sim):
+        self._local_sim = local_sim
+
     def set_polling_interval(self, polling_interval):
         self._polling_interval = polling_interval
 
 
 class TerrawareHub(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info):
+        super().__init__(dev_info)
         self._devices = []
 
     def add_device(self, device):

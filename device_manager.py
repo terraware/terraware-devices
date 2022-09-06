@@ -107,10 +107,9 @@ class DeviceManager(object):
             if dev_info.get('settings', {}).get('enabled', True):
                 device_class = get_device_class(dev_info)
                 if device_class:
-                    device_diagnostic_mode = self.diagnostic_mode
-                    if 'settings' in dev_info and 'diagnosticMode' in dev_info['settings']:
-                        device_diagnostic_mode = dev_info['settings']['diagnosticMode']
-                    device = device_class(dev_info, self.local_sim, device_diagnostic_mode)
+                    device = device_class(dev_info)
+                    if self.local_sim:  # if local sim specified via environment variable, override all devices
+                        device.set_local_sim(self.local_sim)
                     if 'settings' in dev_info and 'pollingInterval' in dev_info['settings']:  # allow overriding device polling interval
                         device.set_polling_interval(dev_info['settings']['pollingInterval'])
                         print('setting polling interval on device %s to %.2f' % (device.name, device.polling_interval))

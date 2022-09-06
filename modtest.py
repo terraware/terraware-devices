@@ -33,10 +33,11 @@ if __name__ == '__main__':
                 'unit': int(options.unit),
                 'holding': int(options.holding),
                 'rtu-over-tcp': int(options.rtu),
-            }
+            },
+            'verbosity': 1
         }
         try:
-            device = ModbusDevice(device_info, local_sim=False, diagnostic_mode=True, load_spec=False)
+            device = ModbusDevice(device_info, load_spec=False)
             value = device.read_register(int(options.register), options.data_type, int(options.unit))
             print('value: %s' % value)
         except Exception as e:

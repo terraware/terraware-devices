@@ -14,8 +14,8 @@ from .base import TerrawareDevice, TerrawareHub
 
 class ModbusDevice(TerrawareDevice):
 
-    def __init__(self, dev_info, local_sim, diagnostic_mode, load_spec=True):
-        super().__init__(dev_info, local_sim, diagnostic_mode)
+    def __init__(self, dev_info, load_spec=True):
+        super().__init__(dev_info)
         self._host = dev_info["address"]
         self._unit = 1  # aka modbus slave number
         self._polling_interval = 60
@@ -64,9 +64,9 @@ class ModbusDevice(TerrawareDevice):
             if value is not None:
                 value *= float(seq_info['scale_factor'])
                 values[(self.id, seq_info['name'])] = value
-                if self._diagnostic_mode:
+                if self._verbosity:
                     print('    (%s, %s): %.2f' % (self.id, seq_info['name'], value))
-        if self._diagnostic_mode:
+        if self._verbosity:
             print('received %d of %d value(s) from %s' % (len(values), len(self._seq_infos), self._host))
         if len(values) != len(self._seq_infos):
             print('received fewer values than expected; reconnecting')
