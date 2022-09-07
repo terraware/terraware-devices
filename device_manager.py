@@ -9,7 +9,7 @@ import json
 import gevent
 import random
 import logging
-import base64  # temp for forwarding data to cloud server
+import decimal
 
 # For timestamping our timeseries values locally since we batch them up and don't send immediately
 from datetime import timezone
@@ -178,6 +178,18 @@ class DeviceManager(object):
                 values = {}
 
             if values:
+
+                # convert values to Decimal objects
+                # TODO: use decimal places from time series specs
+                decimal_places = 2
+                new_values = {}
+                for k, v in values.items():
+                    if isinstance(v, float):
+                        v = round(decimal.Decimal(v), decimal_places)
+                    new_values[k] = v
+                values = new_values
+
+                # store the values for later sending to server
                 self.record_timeseries_values(values)
                 device.last_update_time = time.time()
                 if self.diagnostic_mode:
@@ -213,7 +225,7 @@ class DeviceManager(object):
         gevent.spawn(self.watchdog_loop)
         while True:
             self.send_timeseries_values_to_server()
-            gevent.sleep(120)
+            gevent.sleep(self.send_interval)
 
     def watchdog_loop(self):
         gevent.sleep(self.send_interval + 30)
