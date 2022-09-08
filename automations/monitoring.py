@@ -3,10 +3,10 @@ from .base import TerrawareAutomation
 
 class EventMonitor(TerrawareAutomation):
 
-    def __init__(self, facility_id, name, config):
-        super().__init__(facility_id, name, config)
-        self.monitor_device_id = config['monitorDeviceId']
-        self.monitor_timeseries_name = config['monitorTimeseriesName']
+    def __init__(self, automation_info):
+        super().__init__(automation_info)
+        self.monitor_device_id = automation_info['deviceId']
+        self.monitor_timeseries_name = automation_info['timeseriesName']
         self.prev_state = 0  # want to send alert if start up in alarm state
 
     def run(self, device_manager):
@@ -24,10 +24,10 @@ class EventMonitor(TerrawareAutomation):
 
 class AlarmMonitor(TerrawareAutomation):
 
-    def __init__(self, facility_id, name, config):
-        super().__init__(facility_id, name, config)
-        self.monitor_device_id = config['monitorDeviceId']
-        self.monitor_timeseries_name = config['monitorTimeseriesName']
+    def __init__(self, automation_info):
+        super().__init__(automation_info)
+        self.monitor_device_id = automation_info['deviceId']
+        self.monitor_timeseries_name = automation_info['timeseriesName']
         self.prev_state = 0  # want to send alert if start up in alarm state
 
     def run(self, device_manager):
@@ -45,12 +45,12 @@ class AlarmMonitor(TerrawareAutomation):
 
 class SensorBoundsAlert(TerrawareAutomation):
 
-    def __init__(self, facility_id, name, config):
-        super().__init__(facility_id, name, config)
-        self.monitor_device_id = config['monitorDeviceId']
-        self.monitor_timeseries_name = config['monitorTimeseriesName']
-        self.lower_threshold = config.get('lowerThreshold')
-        self.upper_threshold = config.get('upperThreshold')
+    def __init__(self, automation_info):
+        super().__init__(automation_info)
+        self.monitor_device_id = automation_info['deviceId']
+        self.monitor_timeseries_name = automation_info['timeseriesName']
+        self.lower_threshold = automation_info.get('lowerThreshold')
+        self.upper_threshold = automation_info.get('upperThreshold')
         self.prev_value = None
 
     def run(self, device_manager):

@@ -3,23 +3,23 @@ from .base import TerrawareAutomation
 
 class GeneratorControl(TerrawareAutomation):
 
-    def __init__(self, facility_id, name, config):
-        super().__init__(facility_id, name, config)
-        self.monitor_device_id = config['monitorDeviceId']
-        self.monitor_timeseries_name = config['monitorTimeseriesName']
-        self.control_device_id = config['controlDeviceId']
-        self.control_timeseries_name = config['controlTimeseriesName']
-        self.lower_threshold = config['lowerThreshold']
-        self.upper_threshold = config['upperThreshold']
-        self.verbosity = config.get('verbosity', 0)
-        self.test_output_state = config.get('testOutputState')
+    def __init__(self, automation_info):
+        super().__init__(automation_info)
+        self.monitor_device_id = automation_info['deviceId']
+        self.monitor_timeseries_name = automation_info['timeseriesName']
+        self.lower_threshold = automation_info['lowerThreshold']
+        self.upper_threshold = automation_info['upperThreshold']
+        settings = automation_info.get('settings')
+        self.control_device_id = settings['controlDeviceId']
+        self.control_timeseries_name = settings['controlTimeseriesName']
+        self.test_output_state = settings.get('testOutputState')
 
     def run(self, device_manager):
 
         # get state of charge and relay state
         soc = device_manager.last_value(self.monitor_device_id, self.monitor_timeseries_name)
         relay_state = device_manager.last_value(self.control_device_id, self.control_timeseries_name)
-        if self.verbosity:
+        if self._verbosity:
             print(f'SOC: {soc}, relay: {relay_state}')
 
         # override output state for testing

@@ -155,16 +155,13 @@ class DeviceManager(object):
     def create_automations(self, automation_infos):
         new_automations = 0
         for automation_info in automation_infos:
-            name = automation_info['name']
-            facility_id = automation_info['facilityId']
-            config = automation_info['configuration']
-            automation_class = get_automation_class(config['type'])
+            automation_class = get_automation_class(automation_info['type'])
             if automation_class:
-                automation = automation_class(facility_id, name, config)
+                automation = automation_class(automation_info)
                 self.automations.append(automation)
                 new_automations += 1
             else:
-                print('automation type not found: %s' % config['type'])
+                print('automation type not found: %s' % automation_info['type'])
         print('created %d automations' % (new_automations))
 
     # run this function as a greenlet, polling the given device
@@ -328,7 +325,7 @@ class DeviceManager(object):
                 received_facility_automations = False
                 while not received_facility_automations:
                     try:
-                        url = self.server_path + 'api/v1/facilities/%s/automations' % facility_id
+                        url = self.server_path + 'api/v1/automations?facilityId=%s' % facility_id
                         r = self.send_request(requests.get, url)
                         r.raise_for_status()
                         automation_infos = r.json()['automations']
