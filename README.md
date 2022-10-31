@@ -33,6 +33,8 @@ And these variables must be set to run with a connection to terraware-server for
 *   `SERVER`: The server address, e.g. 'https://localhost:4000/' for the terraware-server instance to load config from & push timeseries data to.
 *   `FACILITIES`: The list of facility IDs this device manager instance represents. Should be just a comma-delimited list of ints, e.g. `1,3,18`
 
+The Terraware admin user interface has a "Generate New Offline Refresh Token" button on the device manager page that generates a new token and updates the corresponding environment variable in Balena.
+
 ## Device Configuration
 
 Refer to `sample-site.json` for a full example of configuring every supported sensor (including the currently-disabled-in-code chirpstack sensors.) There aren't enough drivers in there yet to really have a canonical split between "required" and "optional" - it's still a bit case-by-case. But we do have a split between formal parameters and "additional settings". In the `sample-site.json` the distinction is just "is it in the top-level device config dictionary, or is it in the nested 'settings' dictionary?" But on the terraware-server side, the significance is that the top-level ones can be formalized in the database schema, and then the 'settings' dictionary is a single JSON-valued field in the schema. So, it's harder to validate, but useful for very device-specific settings.
