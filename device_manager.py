@@ -469,21 +469,18 @@ class DeviceManager(object):
     def create_automation_on_server(self, automation_info):
         assert automation_info['facilityId'] in self.facilities
         assert not 'id' in automation_info
-        url = self.server_path + 'api/v1/facilities/%s/automations' % automation_info['facilityId']
-        print('creating automation %s with type %s' % (automation_info['name'], automation_info['configuration']['type']))
+        url = self.server_path + 'api/v1/automations'
+        print('creating automation %s with type %s' % (automation_info['name'], automation_info['type']))
         print(automation_info)
-        upload_automation_info = automation_info.copy()
-        del upload_automation_info['facilityId']  # IDs goes in URL, not payload
-        r = self.send_request(requests.post, url, upload_automation_info)
+        r = self.send_request(requests.post, url, automation_info)
         r.raise_for_status()
         return r.json()['id']  # return ID assigned by server
 
     def update_automation_on_server(self, automation_info):
         assert automation_info['facilityId'] in self.facilities
-        url = self.server_path + 'api/v1/facilities/%s/automations/%s' % (automation_info['facilityId'], automation_info['id'])
+        url = self.server_path + 'api/v1/automations/%s' % (automation_info['id'])
         upload_automation_info = automation_info.copy()
-        del upload_automation_info['facilityId']  # IDs goes in URL, not payload
-        del upload_automation_info['id']
+        del upload_automation_info['id']  # ID goes in URL, not payload
         print('updating automation %d' % automation_info['id'])
         print(upload_automation_info)
         r = self.send_request(requests.put, url, upload_automation_info)
