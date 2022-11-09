@@ -30,6 +30,7 @@ class OmniSenseHub(TerrawareHub):
         self.unknown_device_log = None
         self.device_manager = None
         self._polling_interval = 60  # we don't actually poll these sensors; this just specifies how often the device manager retrieves values stored in this class
+        self.expected_update_interval = None  # don't expect sensor updates for the hub itself, only connected devices
 
     def notify_all_devices_added(self):
         if self._local_sim:
